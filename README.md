@@ -28,6 +28,7 @@ and show how experienced data scientists think.
 -   [Python][python]: more widely used than R
 -   [uv][uv]: Python package and environment management
 -   [ruff][ruff]: Python code checks and formatting
+-   [doit][doit]: dependency-driven task runner used in lessons (not for managing this site)
 -   [Narwhals][narwhals]: common operations on data frames
 -   [Polars][polars]: underlying dataframe engine
 -   [DuckDB][duckdb]: optimized for OLAP rather than OLTP
@@ -35,6 +36,7 @@ and show how experienced data scientists think.
 -   [httpx][httpx]: HTTP client
 
 [bram]: https://judell.github.io/bram/
+[doit]: https://pydoit.org/
 [duckdb]: https://duckdb.org/
 [git]: https://git-scm.com/
 [httpx]: https://www.python-httpx.org/
