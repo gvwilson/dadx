@@ -2,7 +2,8 @@
 
 Build a runner that records each step's inputs and outputs and re-runs only the
 steps whose inputs changed, tying provenance and orchestration together. The
-meta-pipeline that manages the others.
+meta-pipeline that manages the other lessons, for whichever running example you
+chose.
 
 -   Pipeline steps form a directed graph of dependencies.
 -   A runner re-executes only the steps that are stale.

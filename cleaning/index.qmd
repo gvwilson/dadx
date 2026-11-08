@@ -1,8 +1,8 @@
 # A Data Cleaning Pipeline
 
-Build a cleaning pipeline that profiles the raw event log, deduplicates
-records, normalizes status codes and endpoint names, fills missing values, and
-validates the result, emitting a clean dataset and a data-quality report.
+Build a cleaning pipeline that profiles raw records, deduplicates, normalizes
+labels (incident `kind` and `status`, or species names), fills missing values,
+and validates the result, emitting a clean dataset and a data-quality report.
 Cleaning is its own kind of analysis: quality assurance.
 
 -   Cleaning is a pipeline of small, testable transformations.

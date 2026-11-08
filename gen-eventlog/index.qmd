@@ -1,13 +1,15 @@
-# An Event Log Generator
+# A Records Generator
 
-Build the primary dataset: a web service's event stream linking a table of users
-and a table of events (requests, signups, deployments, errors) by user ID,
-generated from seeded randomness and written as CSV. This is the first of two
-generators; later lessons analyze its output and can check their answers against
-the truth it encodes.
+Build the primary dataset for either running example: a parent table plus a
+table of records linked to it by ID, generated from seeded randomness and
+written as CSV. For the disaster example the parent is responders and the
+records are incident reports; for the ecology example the parent is study sites
+and the records are organism observations. This is the first of two generators;
+later lessons analyze its output and check their answers against the truth it
+encodes.
 
 -   A seed makes pseudo-random numbers reproducible.
--   Synthetic events let us know the "right answer" (for example, which version
-    was slower).
+-   Synthetic data lets us know the "right answer" (for example, which protocol
+    was faster).
 -   A generator documents the assumptions baked into the data.
 -   CSV is a simple, portable exchange format.

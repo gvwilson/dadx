@@ -1,6 +1,8 @@
 # Conclusion
 
 Recap the through-line: each lesson built a small version of a real pipeline of
-a different kind, using mature tools rather than rebuilding them. The practices
-(verify, document, reproduce) matter more than any single technique, and are
-what to carry into whatever comes next.
+a different kind — against one of two running examples, a volunteer
+disaster-response group or a field survey collecting ecological data — using
+mature tools rather than rebuilding them. The practices (verify, document,
+reproduce) matter more than any single technique, and are what to carry into
+whatever comes next.

@@ -3,7 +3,13 @@
 The best way to learn data analysis is to study examples, so these lessons
 build small versions of real analysis pipelines, each of a different kind.
 This lesson defines what a pipeline is (ingest, clean, explore, model,
-communicate) and introduces the running example (a web service and its operation).
+communicate) and introduces the course's two running examples, which share the
+same data shapes so that every lesson works against either:
+
+-   **Disaster management** — a volunteer group coordinating response to
+    storms, floods, and other local disasters (for software-oriented learners).
+-   **Ecological data collection** — a field survey recording organisms and
+    environmental conditions at study sites (for science-oriented learners).
 
 -   A data analysis pipeline is a chain of small, checkable steps.
 -   There are many kinds of analysis; this course samples them rather than

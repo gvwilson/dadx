@@ -1,7 +1,8 @@
 # A Forecasting Pipeline
 
-Build a pipeline that fits simple trend and seasonal models to operational
-metrics and evaluates them by forecasting the held-out recent past
+Build a pipeline that fits simple trend and seasonal models to a time series —
+river level for the disaster example, or population counts for the ecology
+example — and evaluates them by forecasting the held-out recent past
 (backtesting). A distinct kind of analysis: forecasting.
 
 -   A forecast is an extrapolation, and its error grows with the horizon.

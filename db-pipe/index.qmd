@@ -1,8 +1,9 @@
 # A SQL Pipeline with DuckDB
 
-Build the same analytical workflow over the event log and users in declarative
-SQL using DuckDB, and see how a columnar engine differs from dataframe code. A
-distinct kind of analysis: relational and declarative.
+Build the same analytical workflow — over incidents and responders, or over
+sites and observations — in declarative SQL using DuckDB, and see how a
+columnar engine differs from dataframe code. A distinct kind of analysis:
+relational and declarative.
 
 -   SQL says what you want; the engine decides how to compute it.
 -   SELECT, WHERE, GROUP, and JOIN mirror the dataframe operations already

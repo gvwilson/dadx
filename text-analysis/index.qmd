@@ -1,8 +1,8 @@
 # A Text Analysis Pipeline
 
-Build a pipeline that tokenizes commit messages or issue titles, counts terms,
-and scores documents with TF-IDF to find what distinguishes them. A distinct
-kind of analysis: text mining.
+Build a pipeline that tokenizes free text — incident report descriptions, or
+field notes on an observation — counts terms, and scores documents with TF-IDF
+to find what distinguishes them. A distinct kind of analysis: text mining.
 
 -   Tokenization and normalization turn free text into countable units.
 -   Term frequency is a start; TF-IDF down-weights common terms.
