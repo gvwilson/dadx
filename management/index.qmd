@@ -1,0 +1,11 @@
+# Data Dictionaries and Provenance
+
+Build the metadata layer of a pipeline: a data dictionary that records each
+field's name, type, units, meaning, and allowed values — for fields such as
+`timestamp`, `endpoint`, `status_code`, and `latency_ms` — and a provenance log
+that records each step's inputs and outputs.
+
+-   Metadata (data about data) is data too.
+-   A data dictionary is a contract between producer and consumer.
+-   Provenance lets someone reconstruct how a result was derived.
+-   Reproducibility is impossible without provenance.

@@ -1,0 +1,11 @@
+# A Clustering Pipeline
+
+Build a pipeline that groups records into segments — services by traffic
+pattern, or users by behavior — with a simple k-means routine and interprets
+what each cluster means. A distinct kind of analysis: unsupervised
+segmentation.
+
+-   Clustering groups records without predefined labels.
+-   k-means alternates assignment and centroid updates until stable.
+-   The algorithm finds structure, not meaning — interpret the clusters.
+-   Validate by asking whether clusters are stable and useful.

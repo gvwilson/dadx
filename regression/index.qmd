@@ -1,0 +1,11 @@
+# A Linear Regression Pipeline
+
+Build a least-squares regression pipeline: fit a line to predict a numeric
+outcome — request latency from load and payload size, or build time from code
+size — inspect the residuals, and evaluate the fit on held-out data. A distinct
+kind of analysis: predictive modeling with a continuous outcome.
+
+-   Least squares minimizes the sum of squared residuals.
+-   Coefficients have concrete, checkable meanings.
+-   Residuals reveal what the model misses.
+-   A fitted line is a claim, not a fact — evaluate it on unseen data.

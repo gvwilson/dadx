@@ -1,0 +1,355 @@
+[
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Data Analysis Design by Example",
+    "section": "",
+    "text": "Overview\nThe best way to learn design in any field is to study examples. These lessons therefore build small versions of real data analysis pipelines to introduce some fundamental ideas in data science and show how experienced data scientists think.\nGreg Wilson is a programmer, author, and educator based in Toronto. He was the co-founder and first Executive Director of Software Carpentry and received ACM SIGSOFT’s Influential Educator Award in 2020.\n\nstart where you are · use what you have · help who you can",
+    "crumbs": [
+      "Overview"
+    ]
+  },
+  {
+    "objectID": "intro/index.html",
+    "href": "intro/index.html",
+    "title": "1  Introduction",
+    "section": "",
+    "text": "The best way to learn data analysis is to study examples, so these lessons build small versions of real analysis pipelines — each of a different kind — rather than reimplementing the tools those pipelines use. This lesson defines what a pipeline is (ingest, clean, explore, model, communicate), introduces the running example — a web service and its operations — and sets the through-line: we use mature tools and build analyses, not libraries.\n\nA data analysis pipeline is a chain of small, checkable steps.\nThere are many kinds of analysis; this course samples them rather than drilling one.\nWe use mature tools (Polars, DuckDB, Vega-Altair, httpx) instead of rebuilding them.\nReproducibility means recording every step so an analysis can be re-run and audited.",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Introduction</span>"
+    ]
+  },
+  {
+    "objectID": "gen-eventlog/index.html",
+    "href": "gen-eventlog/index.html",
+    "title": "2  An Event Log Generator",
+    "section": "",
+    "text": "Build the primary dataset: a web service’s event stream — a table of users and a table of events (requests, signups, deployments, errors) linked to them by user ID, generated from seeded randomness and written as CSV. This is the first of two generators; later lessons analyze its output and can check their answers against the truth it encodes.\n\nA seed makes pseudo-random numbers reproducible.\nSynthetic events let us know the “right answer” (for example, which version was slower).\nA generator documents the assumptions baked into the data.\nCSV is a simple, portable exchange format.",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>An Event Log Generator</span>"
+    ]
+  },
+  {
+    "objectID": "pipeline/index.html",
+    "href": "pipeline/index.html",
+    "title": "3  Your First Pipeline",
+    "section": "",
+    "text": "Build a small end-to-end exploratory pipeline: read the event log, clean the obvious problems, summarize it (requests per endpoint, latency, error rate), and plot the result. Along the way, meet the tools this course relies on — reading CSV, selecting and filtering columns, grouping and joining, reshaping, and computing basic statistics — as libraries to call, not things to reimplement.\n\nA pipeline is ingest → clean → explore → summarize → communicate.\nPolars reads CSVs and does select, filter, group, join, and reshape for us.\nBasic descriptive statistics come from the library, not hand-rolled code.\nEvery pipeline ends by checking its answer, ideally against known truth.",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Your First Pipeline</span>"
+    ]
+  },
+  {
+    "objectID": "management/index.html",
+    "href": "management/index.html",
+    "title": "4  Data Dictionaries and Provenance",
+    "section": "",
+    "text": "Build the metadata layer of a pipeline: a data dictionary that records each field’s name, type, units, meaning, and allowed values — for fields such as timestamp, endpoint, status_code, and latency_ms — and a provenance log that records each step’s inputs and outputs.\n\nMetadata (data about data) is data too.\nA data dictionary is a contract between producer and consumer.\nProvenance lets someone reconstruct how a result was derived.\nReproducibility is impossible without provenance.",
+    "crumbs": [
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>Data Dictionaries and Provenance</span>"
+    ]
+  },
+  {
+    "objectID": "cleaning/index.html",
+    "href": "cleaning/index.html",
+    "title": "5  A Data Cleaning Pipeline",
+    "section": "",
+    "text": "Build a cleaning pipeline that profiles the raw event log, deduplicates records, normalizes status codes and endpoint names, fills missing values, and validates the result — emitting a clean dataset and a data-quality report. Cleaning is its own kind of analysis: quality assurance.\n\nCleaning is a pipeline of small, testable transformations.\nProfiling first (types, ranges, missingness) tells you what needs fixing.\nDeduplication needs a notion of “same record”.\nEvery change is documented so clean data can be traced to raw data.",
+    "crumbs": [
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>A Data Cleaning Pipeline</span>"
+    ]
+  },
+  {
+    "objectID": "operational-gen/index.html",
+    "href": "operational-gen/index.html",
+    "title": "6  An Operational Metrics Generator",
+    "section": "",
+    "text": "Build a generator that produces time-series metrics for the service — request rate, error rate, latency percentiles, CPU, and memory — with trend, seasonality, noise, and a few injected anomalies, so the forecasting and monitoring lessons have known targets to find.\n\nA time series is trend plus seasonality plus noise.\nBecause we choose the components, we know the true signal.\nInjected anomalies give the monitoring lesson known targets to recover.",
+    "crumbs": [
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>An Operational Metrics Generator</span>"
+    ]
+  },
+  {
+    "objectID": "retention/index.html",
+    "href": "retention/index.html",
+    "title": "7  A Cohort and Retention Pipeline",
+    "section": "",
+    "text": "Build a pipeline that groups users into cohorts by signup month and computes how many of each cohort return in each later month — the retention curve. A distinct kind of analysis: behavior over time, by group.\n\nA cohort shares a defining event; retention tracks its members over time.\nGrouping by cohort and period is a table joined to itself.\nRetention answers “do users come back?”, not just “how many signed up?”.\nCheck counts against hand-computed small examples.",
+    "crumbs": [
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>A Cohort and Retention Pipeline</span>"
+    ]
+  },
+  {
+    "objectID": "funnel/index.html",
+    "href": "funnel/index.html",
+    "title": "8  A Funnel Pipeline",
+    "section": "",
+    "text": "Build a pipeline that traces users through a sequence of stages — signup, activation, first deploy, paid plan — and reports the drop-off at each one. A distinct kind of analysis: funnel and conversion analysis.\n\nA funnel orders stages and measures conversion between them.\nEach stage is a filter; drop-off is the complement.\nFunnels reveal where a process loses users.\nStage order and definition change the answer — document them.",
+    "crumbs": [
+      "<span class='chapter-number'>8</span>  <span class='chapter-title'>A Funnel Pipeline</span>"
+    ]
+  },
+  {
+    "objectID": "ab-test/index.html",
+    "href": "ab-test/index.html",
+    "title": "9  An A/B Test Pipeline",
+    "section": "",
+    "text": "Build a pipeline that compares two feature variants (for example, a redesigned page or a backend change) with a permutation test and a bootstrap confidence interval for the effect on latency or conversion. A distinct kind of analysis: experimentation and inference.\n\nThe null hypothesis is “no real difference”; shuffling labels simulates it.\nA p-value is how often shuffles look as extreme as the real data.\nThe bootstrap puts a confidence interval around an effect size.\nSimulated inference replaces closed-form math we may not know.",
+    "crumbs": [
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>An A/B Test Pipeline</span>"
+    ]
+  },
+  {
+    "objectID": "forecasting/index.html",
+    "href": "forecasting/index.html",
+    "title": "10  A Forecasting Pipeline",
+    "section": "",
+    "text": "Build a pipeline that fits simple trend and seasonal models to operational metrics and evaluates them by forecasting the held-out recent past (backtesting). A distinct kind of analysis: forecasting.\n\nA forecast is an extrapolation, and its error grows with the horizon.\nNaive and seasonal baselines give a floor to beat.\nBacktesting holds out the recent past to judge a model.\nForecast uncertainty matters as much as the point forecast.",
+    "crumbs": [
+      "<span class='chapter-number'>10</span>  <span class='chapter-title'>A Forecasting Pipeline</span>"
+    ]
+  },
+  {
+    "objectID": "regression/index.html",
+    "href": "regression/index.html",
+    "title": "11  A Linear Regression Pipeline",
+    "section": "",
+    "text": "Build a least-squares regression pipeline: fit a line to predict a numeric outcome — request latency from load and payload size, or build time from code size — inspect the residuals, and evaluate the fit on held-out data. A distinct kind of analysis: predictive modeling with a continuous outcome.\n\nLeast squares minimizes the sum of squared residuals.\nCoefficients have concrete, checkable meanings.\nResiduals reveal what the model misses.\nA fitted line is a claim, not a fact — evaluate it on unseen data.",
+    "crumbs": [
+      "<span class='chapter-number'>11</span>  <span class='chapter-title'>A Linear Regression Pipeline</span>"
+    ]
+  },
+  {
+    "objectID": "classification/index.html",
+    "href": "classification/index.html",
+    "title": "12  A Classification Pipeline",
+    "section": "",
+    "text": "Build a pipeline that predicts a category — will this request fail with a 5xx, or will this build fail? — from its features, and judge it with a confusion matrix and the right metric. A distinct kind of analysis: predictive modeling with a categorical outcome.\n\nClassification predicts a label, not a number.\nA confusion matrix shows the kinds of errors a classifier makes.\nAccuracy alone misleads when classes are imbalanced.\nThe right metric depends on the cost of each kind of error.",
+    "crumbs": [
+      "<span class='chapter-number'>12</span>  <span class='chapter-title'>A Classification Pipeline</span>"
+    ]
+  },
+  {
+    "objectID": "similarity/index.html",
+    "href": "similarity/index.html",
+    "title": "13  A Similarity Pipeline",
+    "section": "",
+    "text": "Build a pipeline that finds the records most like a given one — similar error reports, similar services, or similar users — under some distance on chosen features. A distinct kind of analysis: nearest-neighbor and similarity analysis.\n\n“Similar” means close under some distance on chosen features.\nFeature choice and scaling decide what similarity means.\nNearest neighbors generalize from “equal” to “nearby”.\nSimilarity underpins recommendation and record linkage.",
+    "crumbs": [
+      "<span class='chapter-number'>13</span>  <span class='chapter-title'>A Similarity Pipeline</span>"
+    ]
+  },
+  {
+    "objectID": "text-analysis/index.html",
+    "href": "text-analysis/index.html",
+    "title": "14  A Text Analysis Pipeline",
+    "section": "",
+    "text": "Build a pipeline that tokenizes commit messages or issue titles, counts terms, and scores documents with TF-IDF to find what distinguishes them. A distinct kind of analysis: text mining.\n\nTokenization and normalization turn free text into countable units.\nTerm frequency is a start; TF-IDF down-weights common terms.\nA document becomes a vector of term weights.\nText pipelines need the same cleaning and validation as numeric ones.",
+    "crumbs": [
+      "<span class='chapter-number'>14</span>  <span class='chapter-title'>A Text Analysis Pipeline</span>"
+    ]
+  },
+  {
+    "objectID": "db-pipe/index.html",
+    "href": "db-pipe/index.html",
+    "title": "15  A SQL Pipeline with DuckDB",
+    "section": "",
+    "text": "Build the same analytical workflow over the event log and users in declarative SQL using DuckDB, and see how a columnar engine differs from dataframe code. A distinct kind of analysis: relational and declarative.\n\nSQL says what you want; the engine decides how to compute it.\nSELECT, WHERE, GROUP, and JOIN mirror the dataframe operations already used.\nDuckDB’s columnar engine is optimized for analytical queries.\nTwo mental models — dataframe and relational — solve the same problems.",
+    "crumbs": [
+      "<span class='chapter-number'>15</span>  <span class='chapter-title'>A SQL Pipeline with DuckDB</span>"
+    ]
+  },
+  {
+    "objectID": "etl/index.html",
+    "href": "etl/index.html",
+    "title": "16  An ETL Pipeline from the Web",
+    "section": "",
+    "text": "Build an ingestion pipeline that fetches a repository’s issues or commits (or a CI status feed) from a public API with httpx, transforms it, and loads it into DuckDB — handling pagination, rate limits, and caching. A distinct kind of analysis: extract, transform, load.\n\nETL is ingest → transform → load, and the ingest step is often the web.\nhttpx fetches; we add pagination, rate limits, and caching around it.\nCache responses so re-runs don’t re-fetch (or re-bill) the source.\nA mock server lets us test the pipeline offline.",
+    "crumbs": [
+      "<span class='chapter-number'>16</span>  <span class='chapter-title'>An ETL Pipeline from the Web</span>"
+    ]
+  },
+  {
+    "objectID": "anomaly/index.html",
+    "href": "anomaly/index.html",
+    "title": "17  An Anomaly and Monitoring Pipeline",
+    "section": "",
+    "text": "Build a pipeline that flags unusual values and detects drift in operational metrics using z-scores and simple control rules. A distinct kind of analysis: monitoring and anomaly detection.\n\nAn anomaly is an observation far from what a model expects.\nZ-scores and rolling statistics define “expected” and “far”.\nDrift means the data’s baseline itself is moving.\nMonitoring runs continuously, so it must be cheap and logged.",
+    "crumbs": [
+      "<span class='chapter-number'>17</span>  <span class='chapter-title'>An Anomaly and Monitoring Pipeline</span>"
+    ]
+  },
+  {
+    "objectID": "clustering/index.html",
+    "href": "clustering/index.html",
+    "title": "18  A Clustering Pipeline",
+    "section": "",
+    "text": "Build a pipeline that groups records into segments — services by traffic pattern, or users by behavior — with a simple k-means routine and interprets what each cluster means. A distinct kind of analysis: unsupervised segmentation.\n\nClustering groups records without predefined labels.\nk-means alternates assignment and centroid updates until stable.\nThe algorithm finds structure, not meaning — interpret the clusters.\nValidate by asking whether clusters are stable and useful.",
+    "crumbs": [
+      "<span class='chapter-number'>18</span>  <span class='chapter-title'>A Clustering Pipeline</span>"
+    ]
+  },
+  {
+    "objectID": "reproducible/index.html",
+    "href": "reproducible/index.html",
+    "title": "19  A Reproducible Pipeline",
+    "section": "",
+    "text": "Build a runner that records each step’s inputs and outputs and re-runs only the steps whose inputs changed, tying provenance and orchestration together. The meta-pipeline that manages the others.\n\nPipeline steps form a directed graph of dependencies.\nA runner re-executes only the steps that are stale.\nA recorded pipeline is a reproducible pipeline.\nThis is how real tools manage analyses end-to-end.",
+    "crumbs": [
+      "<span class='chapter-number'>19</span>  <span class='chapter-title'>A Reproducible Pipeline</span>"
+    ]
+  },
+  {
+    "objectID": "finale/index.html",
+    "href": "finale/index.html",
+    "title": "Data Analysis Design by Example",
+    "section": "",
+    "text": "Conclusion\n\nRecap the through-line: each lesson built a small version of a real pipeline of a different kind, using mature tools rather than rebuilding them. The habits — verify, document, reproduce — matter more than any single technique, and are what to carry into whatever comes next.",
+    "crumbs": [
+      "<span class='chapter-number'>20</span>  <span class='chapter-title'>index.html</span>"
+    ]
+  },
+  {
+    "objectID": "license/index.html",
+    "href": "license/index.html",
+    "title": "Appendix A — License",
+    "section": "",
+    "text": "A.1 Writing\nAll of the written material is made available under the Creative Commons - Attribution - NonCommercial 4.0 International license (CC-BY-NC-4.0), while the software is made available under the Hippocratic License.\nThis is a human-readable summary of (and not a substitute for) the license. For the full legal text of this license, please see https://creativecommons.org/licenses/by-nc/4.0/legalcode.\nAll of this site is made available under the terms of the Creative Commons Attribution - NonCommercial 4.0 license. You are free to:\nUnder the following terms:\nNotices:\nYou do not have to comply with the license for elements of the material in the public domain or where your use is permitted by an applicable exception or limitation.\nNo warranties are given. The license may not give you all of the permissions necessary for your intended use. For example, other rights such as publicity, privacy, or moral rights may limit how you use the material.",
+    "crumbs": [
+      "Appendices",
+      "<span class='chapter-number'>A</span>  <span class='chapter-title'>License</span>"
+    ]
+  },
+  {
+    "objectID": "license/index.html#writing",
+    "href": "license/index.html#writing",
+    "title": "Appendix A — License",
+    "section": "",
+    "text": "Share — copy and redistribute the material in any medium or format\nAdapt — remix, transform, and build upon the material\nThe licensor cannot revoke these freedoms as long as you follow the license terms.\n\n\n\nAttribution — You must give appropriate credit, provide a link to the license, and indicate if changes were made. You may do so in any reasonable manner, but not in any way that suggests the licensor endorses you or your use.\nNonCommercial — You may not use the material for commercial purposes.\nNo additional restrictions — You may not apply legal terms or technological measures that legally restrict others from doing anything the license permits.",
+    "crumbs": [
+      "Appendices",
+      "<span class='chapter-number'>A</span>  <span class='chapter-title'>License</span>"
+    ]
+  },
+  {
+    "objectID": "license/index.html#software",
+    "href": "license/index.html#software",
+    "title": "Appendix A — License",
+    "section": "A.2 Software",
+    "text": "A.2 Software\nLicensor hereby grants permission by this license (“License”), free of charge, to any person or entity (the “Licensee”) obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:\n\nThe above copyright notice and this License or a subsequent version published on the Hippocratic License Website shall be included in all copies or substantial portions of the Software. Licensee has the option of following the terms and conditions either of the above numbered version of this License or of any subsequent version published on the Hippocratic License Website.\nCompliance with Human Rights Laws and Human Rights Principles:\n\nHuman Rights Laws. The Software shall not be used by any person or entity for any systems, activities, or other uses that violate any applicable laws, regulations, or rules that protect human, civil, labor, privacy, political, environmental, security, economic, due process, or similar rights (the “Human Rights Laws”). Where the Human Rights Laws of more than one jurisdiction are applicable to the use of the Software, the Human Rights Laws that are most protective of the individuals or groups harmed shall apply.\nHuman Rights Principles. Licensee is advised to consult the articles of the United Nations Universal Declaration of Human Rights and the United Nations Global Compact that define recognized principles of international human rights (the “Human Rights Principles”). It is Licensor’s express intent that all use of the Software be consistent with Human Rights Principles. If Licensor receives notification or otherwise learns of an alleged violation of any Human Rights Principles relating to Licensee’s use of the Software, Licensor may in its discretion and without obligation (i) (a) notify Licensee of such allegation and (b) allow Licensee 90 days from notification under (i)(a) to investigate and respond to Licensor regarding the allegation and (ii)\n\nafter the earlier of 90 days from notification under (i)(a), or Licensee’s response under (i)(b), notify Licensee of License termination and (b) allow Licensee an additional 90 days from notification under (ii)(a) to cease use of the Software.\n\nIndemnity. Licensee shall hold harmless and indemnify Licensor against all losses, damages, liabilities, deficiencies, claims, actions, judgments, settlements, interest, awards, penalties, fines, costs, or expenses of whatever kind, including Licensor’s reasonable attorneys’ fees, arising out of or relating to Licensee’s non-compliance with this License or use of the Software in violation of Human Rights Laws or Human Rights Principles.\n\nEnforceability: If any portion or provision of this License is determined to be invalid, illegal, or unenforceable by a court of competent jurisdiction, then such invalidity, illegality, or unenforceability shall not affect any other term or provision of this License or invalidate or render unenforceable such term or provision in any other jurisdiction. Upon a determination that any term or provision is invalid, illegal, or unenforceable, to the extent permitted by applicable law, the court may modify this License to affect the original intent of the parties as closely as possible. The section headings are for convenience only and are not intended to affect the construction or interpretation of this License. Any rule of construction to the effect that ambiguities are to be resolved against the drafting party shall not apply in interpreting this License. The language in this License shall be interpreted as to its fair meaning and not strictly for or against any party.\n\nTHE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\nThe Hippocratic License is an Ethical Source license.",
+    "crumbs": [
+      "Appendices",
+      "<span class='chapter-number'>A</span>  <span class='chapter-title'>License</span>"
+    ]
+  },
+  {
+    "objectID": "conduct/index.html",
+    "href": "conduct/index.html",
+    "title": "Appendix B — Code of Conduct",
+    "section": "",
+    "text": "B.1 Our Standards\nIn the interest of fostering an open and welcoming environment, we as contributors and maintainers pledge to making participation in our project and our community a harassment-free experience for everyone, regardless of age, body size, disability, ethnicity, gender identity and expression, level of experience, education, socioeconomic status, nationality, personal appearance, race, religion, or sexual identity and orientation.\nExamples of behavior that contributes to creating a positive environment include:\nExamples of unacceptable behavior by participants include:",
+    "crumbs": [
+      "Appendices",
+      "<span class='chapter-number'>B</span>  <span class='chapter-title'>Code of Conduct</span>"
+    ]
+  },
+  {
+    "objectID": "conduct/index.html#our-standards",
+    "href": "conduct/index.html#our-standards",
+    "title": "Appendix B — Code of Conduct",
+    "section": "",
+    "text": "using welcoming and inclusive language,\nbeing respectful of differing viewpoints and experiences,\ngracefully accepting constructive criticism,\nfocusing on what is best for the community, and\nshowing empathy towards other community members.\n\n\n\nthe use of sexualized language or imagery and unwelcome sexual attention or advances,\ntrolling, insulting/derogatory comments, and personal or political attacks,\npublic or private harassment,\npublishing others’ private information, such as a physical or electronic address, without explicit permission, and\nother conduct which could reasonably be considered inappropriate in a professional setting",
+    "crumbs": [
+      "Appendices",
+      "<span class='chapter-number'>B</span>  <span class='chapter-title'>Code of Conduct</span>"
+    ]
+  },
+  {
+    "objectID": "conduct/index.html#our-responsibilities",
+    "href": "conduct/index.html#our-responsibilities",
+    "title": "Appendix B — Code of Conduct",
+    "section": "B.2 Our Responsibilities",
+    "text": "B.2 Our Responsibilities\nProject maintainers are responsible for clarifying the standards of acceptable behavior and are expected to take appropriate and fair corrective action in response to any instances of unacceptable behavior.\nProject maintainers have the right and responsibility to remove, edit, or reject comments, commits, code, wiki edits, issues, and other contributions that are not aligned to this Code of Conduct, or to ban temporarily or permanently any contributor for other behaviors that they deem inappropriate, threatening, offensive, or harmful.",
+    "crumbs": [
+      "Appendices",
+      "<span class='chapter-number'>B</span>  <span class='chapter-title'>Code of Conduct</span>"
+    ]
+  },
+  {
+    "objectID": "conduct/index.html#scope",
+    "href": "conduct/index.html#scope",
+    "title": "Appendix B — Code of Conduct",
+    "section": "B.3 Scope",
+    "text": "B.3 Scope\nThis Code of Conduct applies both within project spaces and in public spaces when an individual is representing the project or its community. Examples of representing a project or community include using an official project email address, posting via an official social media account, or acting as an appointed representative at an online or offline event. Representation of a project may be further defined and clarified by project maintainers.",
+    "crumbs": [
+      "Appendices",
+      "<span class='chapter-number'>B</span>  <span class='chapter-title'>Code of Conduct</span>"
+    ]
+  },
+  {
+    "objectID": "conduct/index.html#enforcement",
+    "href": "conduct/index.html#enforcement",
+    "title": "Appendix B — Code of Conduct",
+    "section": "B.4 Enforcement",
+    "text": "B.4 Enforcement\nInstances of abusive, harassing, or otherwise unacceptable behavior may be reported by emailing the project team. All complaints will be reviewed and investigated and will result in a response that is deemed necessary and appropriate to the circumstances. The project team is obligated to maintain confidentiality with regard to the reporter of an incident. Further details of specific enforcement policies may be posted separately.\nProject maintainers who do not follow or enforce the Code of Conduct in good faith may face temporary or permanent repercussions as determined by other members of the project’s leadership.",
+    "crumbs": [
+      "Appendices",
+      "<span class='chapter-number'>B</span>  <span class='chapter-title'>Code of Conduct</span>"
+    ]
+  },
+  {
+    "objectID": "conduct/index.html#attribution",
+    "href": "conduct/index.html#attribution",
+    "title": "Appendix B — Code of Conduct",
+    "section": "B.5 Attribution",
+    "text": "B.5 Attribution\nThis Code of Conduct is adapted from the Contributor Covenant version 1.4.",
+    "crumbs": [
+      "Appendices",
+      "<span class='chapter-number'>B</span>  <span class='chapter-title'>Code of Conduct</span>"
+    ]
+  },
+  {
+    "objectID": "contributing/index.html",
+    "href": "contributing/index.html",
+    "title": "Appendix C — Contributing",
+    "section": "",
+    "text": "C.1 FAQ\nContributions are very welcome; please contact us by email or by filing an issue in our repository. All contributors must abide by our Code of Conduct.",
+    "crumbs": [
+      "Appendices",
+      "<span class='chapter-number'>C</span>  <span class='chapter-title'>Contributing</span>"
+    ]
+  },
+  {
+    "objectID": "contributing/index.html#faq",
+    "href": "contributing/index.html#faq",
+    "title": "Appendix C — Contributing",
+    "section": "",
+    "text": "Do you need help?\n\nYes—please see the issues in our repository.\n\nWhat sort of feedback would be useful?\n\nEverything is welcome, from pointing out mistakes to suggestions for better explanations.\n\nCan I add a new section?\n\nPossibly, but please reach out before doing so.\n\nWhy is this material free?\n\nBecause if we all give a little, we all get a lot.",
+    "crumbs": [
+      "Appendices",
+      "<span class='chapter-number'>C</span>  <span class='chapter-title'>Contributing</span>"
+    ]
+  },
+  {
+    "objectID": "bibliography/index.html",
+    "href": "bibliography/index.html",
+    "title": "Appendix D — Bibliography",
+    "section": "",
+    "text": "Irving, Damien, Kate Hertweck, Luke Johnston, Joel Ostblom, Charlotte Wickham, and Greg Wilson. 2021. Research Software Engineering with Python: Building Software That Makes Research Possible. CRC Press/Taylor; Francis. ISBN 978-0367698348.",
+    "crumbs": [
+      "Appendices",
+      "<span class='chapter-number'>D</span>  <span class='chapter-title'>Bibliography</span>"
+    ]
+  },
+  {
+    "objectID": "glossary/index.html",
+    "href": "glossary/index.html",
+    "title": "Appendix E — Glossary",
+    "section": "",
+    "text": "pipeline\n\nFIXME",
+    "crumbs": [
+      "Appendices",
+      "<span class='chapter-number'>E</span>  <span class='chapter-title'>Glossary</span>"
+    ]
+  }
+]

@@ -1,0 +1,11 @@
+# An A/B Test Pipeline
+
+Build a pipeline that compares two feature variants (for example, a redesigned
+page or a backend change) with a permutation test and a bootstrap confidence
+interval for the effect on latency or conversion. A distinct kind of analysis:
+experimentation and inference.
+
+-   The null hypothesis is "no real difference"; shuffling labels simulates it.
+-   A p-value is how often shuffles look as extreme as the real data.
+-   The bootstrap puts a confidence interval around an effect size.
+-   Simulated inference replaces closed-form math we may not know.

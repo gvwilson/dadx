@@ -1,0 +1,14 @@
+# Overview {.unnumbered}
+
+The best way to learn design in any field is to study examples.
+These lessons therefore build small versions of real data analysis pipelines
+to introduce some fundamental ideas in data science
+and show how experienced data scientists think.
+
+[Greg Wilson](@wilson-greg) is a programmer, author, and educator based in Toronto.
+He was the co-founder and first Executive Director of Software Carpentry
+and received ACM SIGSOFT's Influential Educator Award in 2020.
+
+::: {.center}
+*start where you are &middot; use what you have &middot; help who you can*
+:::

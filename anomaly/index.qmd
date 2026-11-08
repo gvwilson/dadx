@@ -1,0 +1,10 @@
+# An Anomaly and Monitoring Pipeline
+
+Build a pipeline that flags unusual values and detects drift in operational
+metrics using z-scores and simple control rules. A distinct kind of analysis:
+monitoring and anomaly detection.
+
+-   An anomaly is an observation far from what a model expects.
+-   Z-scores and rolling statistics define "expected" and "far".
+-   Drift means the data's baseline itself is moving.
+-   Monitoring runs continuously, so it must be cheap and logged.

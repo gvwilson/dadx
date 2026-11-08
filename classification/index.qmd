@@ -1,0 +1,11 @@
+# A Classification Pipeline
+
+Build a pipeline that predicts a category — will this request fail with a 5xx,
+or will this build fail? — from its features, and judge it with a confusion
+matrix and the right metric. A distinct kind of analysis: predictive modeling
+with a categorical outcome.
+
+-   Classification predicts a label, not a number.
+-   A confusion matrix shows the kinds of errors a classifier makes.
+-   Accuracy alone misleads when classes are imbalanced.
+-   The right metric depends on the cost of each kind of error.

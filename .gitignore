@@ -1,1 +1,6 @@
 .bram/
+
+/.quarto/
+**/*.quarto_ipynb
+
+*~

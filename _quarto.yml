@@ -1,0 +1,55 @@
+project:
+  type: book
+  output-dir: docs
+
+book:
+  title: "Data Analysis Design by Example"
+  repo-url: "https://github.com/gvwilson/dadx"
+  repo-actions: [edit, source, issue]
+  chapters:
+    - index.qmd
+    - intro/index.qmd
+    - gen-eventlog/index.qmd
+    - pipeline/index.qmd
+    - management/index.qmd
+    - cleaning/index.qmd
+    - operational-gen/index.qmd
+    - retention/index.qmd
+    - funnel/index.qmd
+    - ab-test/index.qmd
+    - forecasting/index.qmd
+    - regression/index.qmd
+    - classification/index.qmd
+    - similarity/index.qmd
+    - text-analysis/index.qmd
+    - db-pipe/index.qmd
+    - etl/index.qmd
+    - anomaly/index.qmd
+    - clustering/index.qmd
+    - reproducible/index.qmd
+    - finale/index.qmd
+  appendices:
+    - license/index.qmd
+    - conduct/index.qmd
+    - contributing/index.qmd
+    - bibliography/index.qmd
+    - glossary/index.qmd
+
+bibliography: bibliography/references.bib
+csl: mccole/book.csl
+
+filters:
+  - mccole/links.lua
+
+shortcodes:
+  - mccole/glossary.lua
+  - mccole/inc-noh1.lua
+
+format:
+  html:
+    css: mccole/book.css
+    link-citations: true
+    theme: cosmo
+    toc: true
+  pdf:
+    documentclass: mccole/krantz

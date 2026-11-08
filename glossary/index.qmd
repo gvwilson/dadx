@@ -1,0 +1,4 @@
+# Glossary
+
+<span id="pipeline">pipeline</span>
+:   FIXME

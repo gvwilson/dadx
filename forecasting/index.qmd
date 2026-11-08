@@ -1,0 +1,10 @@
+# A Forecasting Pipeline
+
+Build a pipeline that fits simple trend and seasonal models to operational
+metrics and evaluates them by forecasting the held-out recent past
+(backtesting). A distinct kind of analysis: forecasting.
+
+-   A forecast is an extrapolation, and its error grows with the horizon.
+-   Naive and seasonal baselines give a floor to beat.
+-   Backtesting holds out the recent past to judge a model.
+-   Forecast uncertainty matters as much as the point forecast.

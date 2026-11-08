@@ -1,0 +1,13 @@
+# Your First Pipeline
+
+Build a small end-to-end exploratory pipeline: read the event log, clean the
+obvious problems, summarize it (requests per endpoint, latency, error rate),
+and plot the result. Along the way, meet the tools this course relies on —
+reading CSV, selecting and filtering columns, grouping and joining, reshaping,
+and computing basic statistics — as libraries to call, not things to
+reimplement.
+
+-   A pipeline is ingest → clean → explore → summarize → communicate.
+-   Polars reads CSVs and does select, filter, group, join, and reshape for us.
+-   Basic descriptive statistics come from the library, not hand-rolled code.
+-   Every pipeline ends by checking its answer, ideally against known truth.

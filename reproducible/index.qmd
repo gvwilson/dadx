@@ -1,0 +1,10 @@
+# A Reproducible Pipeline
+
+Build a runner that records each step's inputs and outputs and re-runs only the
+steps whose inputs changed, tying provenance and orchestration together. The
+meta-pipeline that manages the others.
+
+-   Pipeline steps form a directed graph of dependencies.
+-   A runner re-executes only the steps that are stale.
+-   A recorded pipeline is a reproducible pipeline.
+-   This is how real tools manage analyses end-to-end.
