@@ -1,12 +1,167 @@
 # A Cohort and Retention Pipeline
 
-Build a pipeline that groups records into cohorts by a defining event and
-tracks how many members return in each later period. For the disaster example,
-group volunteers by the month they joined and measure how many keep responding;
-for the ecology example, group sites by first-survey season and measure which
-species recur. A distinct kind of analysis: behavior over time, by group.
-
 -   A cohort shares a defining event; retention tracks its members over time.
--   Grouping by cohort and period is a table joined to itself.
+-   Grouping activity by cohort and period is a self-join.
 -   Retention answers "do they come back?", not just "how many started?".
--   Check counts against hand-computed small examples.
+-   For the disaster example the members are volunteers and the activity is an
+    incident response; for the ecology example the members are sites and the
+    activity is a survey.
+-   The defining event is a choice. Here it is a volunteer's first response,
+    not their sign-up month, because signing up is not the same as showing up.
+
+```python
+import polars as pl
+import altair as alt
+import random
+
+random.seed(12345)
+```
+
+-   Start with two helpers that move between `"YYYY-MM"` labels and integer
+    month numbers. An integer makes "months since first response" a subtraction.
+
+```python
+START_YEAR = 2024
+
+def month_index(ym):
+    """'2024-03' -> an integer month number (0 = 2024-01)."""
+    year, month = ym.split("-")
+    return (int(year) - START_YEAR) * 12 + int(month) - 1
+
+def month_label(idx):
+    """An integer month number -> '2024-03'."""
+    return f"{START_YEAR + idx // 12:04d}-{idx % 12 + 1:02d}"
+```
+
+-   Generate the two tables with a fixed seed so the lesson is reproducible.
+    A volunteer has a `joined` sign-up month; an incident records one response
+    at a `timestamp`.
+
+```python
+roles = ["medic", "logistics", "search", "comms"]
+names = ["Aisha", "Ben", "Cara", "Dmitri", "Elena", "Farid",
+         "Grace", "Hiro", "Ines", "Jules", "Keiko", "Liam"]
+
+responders = []
+incidents = []
+rid = 0
+
+for cohort in range(6):                     # six first-response months
+    for _ in range(random.randint(6, 10)):  # volunteers per cohort
+        rid += 1
+        name = random.choice(names)
+        role = random.choice(roles)
+        joined = max(0, cohort - random.randint(0, 2))
+        responders.append((rid, name, month_label(joined), role))
+        lifetime = max(1, round(random.gauss(4, 1.5)))
+        for k in range(lifetime):           # months since first response
+            for _ in range(random.randint(1, 3)):
+                incidents.append((len(incidents) + 1, month_label(cohort + k), rid))
+```
+
+-   `joined` records when a volunteer signed up and can precede their first
+    response, which is why the cohort is derived from the incident log instead
+    of trusted from `joined`.
+
+```python
+responders = pl.DataFrame(
+    responders, schema=["id", "name", "joined", "role"], orient="row"
+)
+incidents = pl.DataFrame(
+    incidents, schema=["id", "timestamp", "responder_id"], orient="row"
+)
+
+responders.head()
+incidents.head()
+```
+
+-   Convert each response's timestamp to an integer month so later arithmetic is
+    a plain column difference.
+
+```python
+incidents = incidents.with_columns(
+    month_idx=pl.col("timestamp").map_elements(month_index, return_dtype=pl.Int64)
+)
+```
+
+-   Join each response to its volunteer to carry along the name, role, and
+    sign-up month. Then take each volunteer's earliest response month: that is
+    their cohort.
+
+```python
+responses = incidents.join(
+    responders.select("id", "name", "joined", "role"),
+    left_on="responder_id", right_on="id",
+)
+
+cohorts = (
+    responses.group_by("responder_id")
+    .agg(pl.col("month_idx").min().alias("cohort_idx"))
+)
+```
+
+-   The cohort assignment is computed from the same records it is then joined
+    back onto, which is why this is a self-join. `period` is months since a
+    volunteer's first response: zero means "their first month".
+
+```python
+active = (
+    responses.join(cohorts, on="responder_id")
+    .with_columns(period=pl.col("month_idx") - pl.col("cohort_idx"))
+)
+```
+
+-   Group by cohort and period and count distinct volunteers active in each
+    cell. Rows are cohorts, columns are periods.
+
+```python
+retention = (
+    active.group_by("cohort_idx", "period")
+    .agg(pl.col("responder_id").n_unique().alias("active"))
+    .sort(["cohort_idx", "period"])
+)
+
+retention.head()
+```
+
+-   Check against a property that must hold: a cohort's period-0 count equals
+    its size, because every member responded in their first month.
+
+```python
+sizes = cohorts.group_by("cohort_idx").len().sort("cohort_idx")
+first = (
+    retention.filter(pl.col("period") == 0)
+    .select(["cohort_idx", "active"])
+    .sort("cohort_idx")
+)
+assert (sizes["len"] == first["active"]).all()
+```
+
+-   Counts answer "how many?". Dividing each cell by its cohort size answers
+    "what fraction?", which is a retention rate.
+
+```python
+rate = (
+    retention.join(sizes.rename({"len": "size"}), on="cohort_idx")
+    .with_columns(rate=pl.col("active") / pl.col("size"))
+)
+
+rate.head()
+```
+
+-   Plot the matrix as a heatmap. Reading down a column shows one cohort aging;
+    reading across a row shows the same period for different cohorts.
+
+```python
+plot = retention.with_columns(
+    cohort=pl.col("cohort_idx").map_elements(month_label, return_dtype=pl.String),
+    months_since=pl.col("period"),
+)
+
+alt.Chart(plot).mark_rect().encode(
+    x=alt.X("months_since:O", title="months since first response"),
+    y=alt.Y("cohort:N", title="cohort (first-response month)"),
+    color=alt.Color("active:Q", scale=alt.Scale(scheme="greens")),
+    tooltip=["cohort", "months_since", "active"],
+).properties(title="Volunteer retention by cohort")
+```

@@ -1,10 +1,212 @@
 # Data Dictionaries and Provenance
 
 Build the metadata layer of a pipeline: a data dictionary that records each
-field's name, type, units, meaning, and allowed values and a provenance log that
-records each step's inputs and outputs.
+field's name, type, units, meaning, and allowed values, and a provenance log
+that records each step's inputs and outputs.
 
 -   Metadata (data about data) is data too.
 -   A data dictionary is a contract between producer and consumer.
 -   Provenance lets someone reconstruct how a result was derived.
 -   Reproducibility is impossible without provenance.
+
+## The data dictionary
+
+-   A data dictionary has one row per field, with columns for the name, type,
+    units, meaning, and allowed values.
+-   The incidents table is the running example; the dictionary below documents
+    its eight fields.
+-   The allowed values for a categorical field are the controlled vocabulary
+    for that column: nothing else may appear.
+-   Writing those vocabularies as constants means the dictionary and the
+    validation code share one source of truth.
+
+```python
+import json
+from datetime import datetime, timezone
+
+import polars as pl
+
+KINDS = ["storm", "flood", "power-outage", "fire"]
+STATUSES = ["reported", "triaged", "dispatched", "resolved"]
+SEVERITIES = ["low", "medium", "high"]
+```
+
+-   Store the dictionary as a list of dicts first; a list is easy to read and
+    edit, and every other tool can import it.
+-   A categorical field stores its allowed values as a list; a numeric field
+    stores a description of its range; `None` means the field is not
+    constrained.
+
+```python
+dictionary = [
+    {"name": "id", "type": "integer", "units": None,
+     "meaning": "unique identifier for an incident", "allowed": None},
+    {"name": "timestamp", "type": "datetime", "units": None,
+     "meaning": "when the incident was reported", "allowed": None},
+    {"name": "latitude", "type": "float", "units": "decimal degrees",
+     "meaning": "north-south position", "allowed": "between -40.0 and -30.0"},
+    {"name": "longitude", "type": "float", "units": "decimal degrees",
+     "meaning": "east-west position", "allowed": "between 140.0 and 150.0"},
+    {"name": "kind", "type": "string", "units": None,
+     "meaning": "the type of incident", "allowed": KINDS},
+    {"name": "severity", "type": "string", "units": None,
+     "meaning": "how serious the incident is", "allowed": SEVERITIES},
+    {"name": "status", "type": "string", "units": None,
+     "meaning": "where the incident sits in the response workflow", "allowed": STATUSES},
+    {"name": "responder_id", "type": "integer", "units": None,
+     "meaning": "id of the responder assigned", "allowed": "id present in responders"},
+]
+```
+
+-   Turn the list into a dataframe so the dictionary renders as a table and can
+    be queried. This is the point of "metadata is data": the dictionary is just
+    another table.
+-   Lists do not display well in a cell, so join them into a comma-separated
+    string for display and keep the original list for validation.
+
+```python
+def describe(allowed):
+    return ", ".join(allowed) if isinstance(allowed, list) else allowed
+
+dd = pl.DataFrame([{**row, "allowed": describe(row["allowed"])} for row in dictionary])
+dd
+```
+
+-   Because the dictionary is a table, ordinary dataframe queries answer
+    questions about the data without touching the data itself.
+
+```python
+dd.filter(pl.col("units").is_not_null()).select("name", "units")
+```
+
+```python
+[row["name"] for row in dictionary if isinstance(row["allowed"], list)]
+```
+
+## The dictionary is a contract
+
+-   The producer promises to write values the dictionary allows; the consumer
+    relies on that promise. The dictionary is the written contract both sides
+    read.
+-   Validation turns the contract from a promise into a check: walk the
+    categorical fields and flag any value outside the controlled vocabulary.
+
+```python
+def check_allowed(frame, dictionary):
+    problems = []
+    for row in dictionary:
+        if not isinstance(row["allowed"], list):
+            continue
+        name = row["name"]
+        for value in frame[name].to_list():
+            if value not in row["allowed"]:
+                problems.append((name, value))
+    return problems
+```
+
+-   A few hand-written rows stand in for the producer's output. Two values
+    break the contract on purpose: `"Flood"` is capitalized and `"critical"`
+    is not a severity in the dictionary.
+
+```python
+incidents = pl.DataFrame([
+    {"id": 1, "timestamp": "2024-06-01T08:12:00", "latitude": -33.86,
+     "longitude": 151.21, "kind": "storm", "severity": "high",
+     "status": "reported", "responder_id": 3},
+    {"id": 2, "timestamp": "2024-06-01T08:30:00", "latitude": -33.87,
+     "longitude": 151.20, "kind": "Flood", "severity": "medium",
+     "status": "triaged", "responder_id": 3},
+    {"id": 3, "timestamp": "2024-06-01T09:05:00", "latitude": -34.00,
+     "longitude": 150.90, "kind": "fire", "severity": "critical",
+     "status": "dispatched", "responder_id": 7},
+])
+```
+
+```python
+check_allowed(incidents, dictionary)
+```
+
+-   The two violations are the contract doing its job: without the dictionary,
+    `"Flood"` and `"critical"` would silently become separate categories in
+    every downstream summary.
+
+## Provenance
+
+-   The dictionary records what each field means; provenance records where each
+    result came from.
+-   A provenance log is a sequence of records, one per transformation step,
+    each naming the step, its inputs, its outputs, and when it ran.
+-   Appending one small dict per step keeps the log simple and machine-readable.
+
+```python
+provenance = []
+
+def log_step(name, inputs, outputs):
+    entry = {
+        "step": name,
+        "inputs": inputs,
+        "outputs": outputs,
+        "time": datetime.now(timezone.utc).isoformat(),
+    }
+    provenance.append(entry)
+    return entry
+```
+
+-   Run a small pipeline over the incidents and log each step. The log is the
+    audit trail that links the final summary back to the raw rows.
+
+```python
+log_step("load", [], ["incidents"])
+
+cleaned = incidents.with_columns(pl.col("kind").str.to_lowercase())
+log_step("normalize", ["incidents"], ["cleaned"])
+
+counts = cleaned.group_by("kind").len()
+log_step("summarize", ["cleaned"], ["counts_by_kind"])
+```
+
+-   Write the log as JSON lines: one JSON object per line, easy to append and
+    easy to read back with any tool.
+
+```python
+with open("provenance.jsonl", "w") as f:
+    for entry in provenance:
+        f.write(json.dumps(entry) + "\n")
+```
+
+-   Reading the log back as a dataframe closes the loop: the metadata layer is
+    itself queryable data, so you can ask "what were the inputs to the summary?"
+
+```python
+log = pl.read_ndjson("provenance.jsonl")
+log
+```
+
+```python
+log.filter(pl.col("step") == "summarize").select("inputs", "outputs")
+```
+
+-   Without this log, a summary is a rumor: you cannot say how it was made or
+    re-make it.
+-   The dictionary says what the data means; the log says where it came from.
+    Together they are the metadata layer that makes a pipeline reproducible.
+
+## The ecology twin
+
+-   The observations table needs the same treatment; only the fields differ.
+-   Units matter more here: `mass_g` is grams, `length_mm` is millimeters, and
+    `count` is a number of individuals.
+
+```python
+observations_dict = [
+    {"name": "species", "type": "string", "units": None,
+     "meaning": "species identifier", "allowed": "controlled taxonomy"},
+    {"name": "count", "type": "integer", "units": "individuals",
+     "meaning": "number observed at the site", "allowed": "non-negative"},
+    {"name": "mass_g", "type": "float", "units": "grams",
+     "meaning": "mass of the sample", "allowed": "positive"},
+    {"name": "length_mm", "type": "float", "units": "millimeters",
+     "meaning": "length of the sample", "allowed": "positive"},
+]
+pl.DataFrame([{**row, "allowed": describe(row["allowed"])} for row in observations_dict])
+```

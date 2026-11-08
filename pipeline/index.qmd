@@ -1,12 +1,181 @@
 # Your First Pipeline
 
-Build a small end-to-end exploratory pipeline: read a records dataset, clean
-the obvious problems, summarize it (incidents per kind, or observations per
-species), and plot the result. Along the way, meet the tools this course
-relies on: reading CSV, selecting and filtering columns, grouping and joining,
-reshaping, and computing basic statistics.
+Build a small end-to-end exploratory pipeline over incident records: generate a
+sample, ingest it, clean the obvious problems, summarize it (incidents per kind,
+severity distribution), and plot the result. Along the way, meet the two tools
+this course leans on for exploratory work: Polars for dataframes and
+Vega-Altair for charts.
 
 -   A pipeline is ingest → clean → explore → summarize → communicate.
--   Polars reads CSVs and does select, filter, group, join, and reshape for us.
--   Basic descriptive statistics come from the library, not hand-rolled code.
--   Every pipeline ends by checking its answer, ideally against known truth.
+-   Each stage is a small, checkable step; the next stage trusts the last.
+-   The ecology twin has the same shape: observations per species instead of
+    incidents per kind.
+
+## Make a sample
+
+-   A fixed seed makes the pseudo-random sequence reproducible, so this lesson
+    runs the same every time and the numbers below can be checked against the
+    output.
+-   Generate the sample inline so the lesson is self-contained; a real pipeline
+    would read this from a file or an API instead.
+
+```python
+import random
+from datetime import datetime, timedelta
+
+random.seed(20261108)
+
+KINDS = ["storm", "flood", "power-outage", "fire"]
+STATUSES = ["reported", "triaged", "dispatched", "resolved"]
+BASE = datetime(2024, 6, 1, 0, 0, 0)
+
+def make_incidents(n, n_responders=20):
+    rows = []
+    for i in range(1, n + 1):
+        when = BASE + timedelta(
+            days=random.randint(0, 60),
+            hours=random.randint(0, 23),
+            minutes=random.randint(0, 59),
+        )
+        rows.append({
+            "id": i,
+            "timestamp": when.isoformat(),
+            "latitude": round(random.uniform(-40.0, -30.0), 4),
+            "longitude": round(random.uniform(140.0, 150.0), 4),
+            "kind": random.choice(KINDS),
+            "severity": random.randint(1, 5),
+            "status": random.choice(STATUSES),
+            "responder_id": random.randint(1, n_responders),
+        })
+    return rows
+```
+
+-   The coordinate ranges pin the incidents to south-eastern Australia, the same
+    region the full generator uses; that is an assumption written down rather
+    than hidden in the code.
+
+## Ingest
+
+-   Ingest brings raw records into a dataframe. Here we round-trip through CSV
+    so `read_csv` is the ingest step; an API or a database would substitute for
+    the file.
+-   `head` shows the first rows; the schema it prints is the contract the rest
+    of the pipeline relies on.
+
+```python
+import polars as pl
+
+pl.DataFrame(make_incidents(120)).write_csv("incidents.csv")
+raw = pl.read_csv("incidents.csv")
+raw.head()
+```
+
+## Clean
+
+-   Cleaning is its own lesson; this synthetic data has little to fix, so
+    profile first: check the types and count missing values.
+-   The one real clean-up is parsing `timestamp` from a string into a datetime,
+    so ordering and date arithmetic work later.
+
+```python
+raw.schema
+raw.null_count()
+```
+
+```python
+cleaned = raw.with_columns(
+    pl.col("timestamp").str.to_datetime(format="%Y-%m-%dT%H:%M:%S")
+)
+cleaned.schema
+```
+
+## Explore
+
+-   `select` picks columns; `filter` picks rows. Both return a new frame and
+    leave the original untouched.
+
+```python
+cols = cleaned.select(["id", "kind", "severity", "status"])
+cols.head()
+```
+
+```python
+high = cleaned.filter(pl.col("severity") >= 4)
+high.shape
+```
+
+-   `high.shape` is the number of rows and columns: the filter keeps only the
+    most severe incidents.
+
+## Summarize
+
+-   `group_by` plus an aggregation collapses many rows into one row per group.
+-   Count per kind is the headline number: which incident type is most common?
+
+```python
+by_kind = cleaned.group_by("kind").len().sort("len", descending=True)
+by_kind
+```
+
+-   The severity distribution is the same operation on a different column.
+
+```python
+by_severity = cleaned.group_by("severity").len().sort("severity")
+by_severity
+```
+
+## Reshape
+
+-   `pivot` spreads one column's values across the columns, turning a long table
+    into a wide one. Here the severity counts become a matrix with one row per
+    kind.
+
+```python
+matrix = (
+    cleaned.group_by("kind", "severity")
+    .len()
+    .pivot(on="severity", index="kind", values="len", sort_columns=True)
+)
+matrix
+```
+
+-   A `null` cell means no incident of that kind had that severity; the row and
+    column totals are the summaries computed above.
+
+## Communicate
+
+-   Altair turns a summarized frame into a chart with one declaration: encode
+    the x and y channels and the notebook renders it.
+-   `kind` is nominal (`N`) so each value is a separate bar; `len` is
+    quantitative (`Q`) so bar height is a measured value. `sort="-y"` orders the
+    bars tallest first.
+
+```python
+import altair as alt
+
+chart = (
+    alt.Chart(by_kind)
+    .mark_bar()
+    .encode(
+        x=alt.X("kind:N", sort="-y", title="kind"),
+        y=alt.Y("len:Q", title="incidents"),
+    )
+    .properties(title="Incidents per kind")
+)
+chart
+```
+
+## Check the answer
+
+-   Every pipeline ends by checking its answer against something known. The
+    synthetic data gives us ground truth: the counts must sum to the number of
+    rows, and every kind must appear.
+
+```python
+assert by_kind["len"].sum() == cleaned.height
+assert set(by_kind["kind"]) == set(KINDS)
+```
+
+-   The ecology twin runs the same stages with `observations` grouped by
+    `species`, so "count per kind" becomes "count per species" and the chart
+    labels species on the x axis; only the column names change.

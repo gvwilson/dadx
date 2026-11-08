@@ -1,11 +1,126 @@
 # An Anomaly and Monitoring Pipeline
 
 Build a pipeline that flags unusual values and detects drift in a time series
-(e.g., a flood spike in a river gauge, or a pollution spike at a study site) using
-z-scores and simple control rules. A distinct kind of analysis: monitoring and
-anomaly detection.
+(e.g., a flood spike in a river gauge, or a pollution spike at a study site)
+using z-scores and rolling statistics. A distinct kind of analysis: monitoring
+and anomaly detection.
 
 -   An anomaly is an observation far from what a model expects.
 -   Z-scores and rolling statistics define "expected" and "far".
 -   Drift means the data's baseline itself is moving.
 -   Monitoring runs continuously, so it must be cheap and logged.
+
+-   Import the tools this lesson needs. `statistics` comes from the standard
+    library; `polars` and `altair` do the heavy lifting. We fix the seed so the
+    synthetic series, spike, and flags are identical on every run.
+
+```python
+import random
+import statistics
+from datetime import datetime, timedelta
+
+import altair as alt
+import polars as pl
+
+random.seed(7)
+```
+
+-   A river gauge is a time series: one number per timestamp. We synthesize a
+    week of hourly readings as a flat baseline plus small noise, then inject one
+    brief flood spike. Real data would arrive from an ingest step; here we make
+    it ourselves so the lesson is self-contained.
+
+```python
+N = 200                  # hourly readings, a bit over a week
+BASELINE = 2.0           # meters: the gauge's usual level
+NOISE = 0.1              # meters: hour-to-hour jitter
+start = datetime(2024, 6, 1, 0, 0, 0)
+
+levels = []
+for i in range(N):
+    level = BASELINE + random.gauss(0.0, NOISE)
+    if 100 <= i <= 103:  # a short flood spike
+        level += 4.0
+    levels.append(round(level, 3))
+
+df = pl.DataFrame({
+    "timestamp": [start + timedelta(hours=i) for i in range(N)],
+    "level": levels,
+})
+df.head()
+```
+
+-   An anomaly is an observation far from what a model expects. Our first model
+    is "the level is usually the mean, give or take the standard deviation". A
+    z-score measures distance from that mean in units of standard deviation:
+    zero is average, 3 is three standard deviations out.
+
+```python
+mean = statistics.fmean(df["level"])
+sd = statistics.stdev(df["level"])
+mean, sd
+```
+
+-   Flag any point whose z-score is outside three standard deviations. Taking
+    the absolute value catches both a spike and a sudden drop, since either is
+    unusual.
+
+```python
+THRESHOLD = 3.0
+
+df = df.with_columns(
+    ((pl.col("level") - mean) / sd).alias("z"),
+)
+df = df.with_columns(
+    (pl.col("z").abs() > THRESHOLD).alias("flag"),
+)
+df.filter(pl.col("flag"))
+```
+
+-   Only the four spike points clear the threshold; the noise is well inside it.
+    We flag rather than drop: an anomaly is a signal to inspect, not an error to
+    remove.
+
+```python
+base = alt.Chart(df).encode(x="timestamp:T")
+line = base.mark_line().encode(y="level:Q")
+marks = base.mark_point(color="red", size=70).encode(y="level:Q").transform_filter("datum.flag")
+(line + marks).properties(width=600, height=200)
+```
+
+-   The plot puts a red dot on each flagged reading, exactly on the spike. But
+    the global mean and standard deviation are fixed. If the river's usual level
+    slowly rises, "expected" has moved and every new reading starts to look
+    unusual. That movement is drift, and rolling statistics track it.
+
+```python
+WINDOW = 12  # hours: a moving baseline
+
+df = df.with_columns(
+    pl.col("level").rolling_mean(window_size=WINDOW).alias("roll_mean"),
+    pl.col("level").rolling_std(window_size=WINDOW).alias("roll_std"),
+)
+df = df.with_columns(
+    ((pl.col("level") - pl.col("roll_mean")) / pl.col("roll_std")).alias("roll_z"),
+)
+df = df.with_columns(
+    (pl.col("roll_z").abs() > THRESHOLD).alias("roll_flag"),
+)
+df.filter(pl.col("roll_flag"))
+```
+
+-   The rolling version flags only the leading edge of the spike. A window that
+    contains the spike absorbs it into its own mean and standard deviation, so
+    the trailing points look ordinary again. Rolling statistics follow a slow
+    baseline well and catch a single sharp jump poorly. In practice you keep
+    both models: a global one for the usual level and a rolling one for drift.
+
+-   Monitoring runs continuously, so each check must be cheap. A rolling mean
+    and standard deviation update in constant time from a couple of running
+    sums, and need only the last few readings, not the whole history. Every
+    alert is logged with its readings, window, and threshold, so it can be
+    traced back and replayed.
+
+-   The same pipeline runs on the ecology example with only the column changed:
+    swap `level` for `pollution_ppm`, and a pollution spike at a study site is
+    flagged the same way.

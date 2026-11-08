@@ -1,11 +1,67 @@
 # A Reproducible Pipeline
 
-Build a runner that records each step's inputs and outputs and re-runs only the
-steps whose inputs changed, tying provenance and orchestration together. The
-meta-pipeline that manages the other lessons, for whichever running example you
-chose.
+-   A pipeline is a directed graph: each step consumes the outputs of the steps before it.
+-   The runner is the program that walks that graph and executes the steps in the right order.
+-   `doit` is one such runner; Make and Snakemake are two others.
+-   We describe the graph in a file named `dodo.py`, with one function per step.
+-   Whatever your running example, `data/*.csv` stands in for its raw tables and `report.html` for its final summary.
 
--   Pipeline steps form a directed graph of dependencies.
--   A runner re-executes only the steps that are stale.
--   A recorded pipeline is a reproducible pipeline.
--   This is how real tools manage analyses end-to-end.
+```python
+# dodo.py
+
+def task_make_data():
+    """Generate the raw CSV files."""
+    return {
+        "actions": ["python bin/make_data.py"],
+        "targets": ["data/records.csv", "data/events.csv"],
+    }
+
+def task_report():
+    """Build the report from the data and the analysis script."""
+    return {
+        "file_dep": ["bin/script.py", "data/*.csv"],
+        "targets": ["report.html"],
+        "actions": ["python bin/script.py"],
+    }
+```
+
+-   `targets` names the files a task produces.
+-   `file_dep` names the files a task needs to read; `data/*.csv` is a glob that matches every CSV.
+-   `actions` is the command that turns the dependencies into the targets.
+-   `task_report` depends on `bin/script.py` and every CSV, so changing any of them invalidates `report.html`.
+-   `task_make_data` declares no dependencies, so it is the source of the graph.
+-   `bin/make_data.py` writes the two CSVs; `bin/script.py` reads them and writes `report.html`.
+
+```sh
+doit list
+```
+
+-   `doit list` prints the task names and their docstrings without running anything.
+
+```sh
+doit
+```
+
+-   `doit` runs every task whose targets are missing or older than its dependencies.
+-   The first run builds everything, from the raw CSVs up to `report.html`.
+
+```sh
+doit
+```
+
+-   Run it again and doit reports that nothing is out of date, so no step re-runs.
+-   Edit one CSV (or `bin/script.py`) and `doit` re-runs only the steps downstream of it.
+-   `task_report` re-runs; `task_make_data` stays put because its own inputs did not change.
+
+```sh
+doit clean
+```
+
+-   `doit clean` removes every declared target but leaves the source files in place.
+-   The next `doit` rebuilds the whole graph from scratch.
+
+-   A runner re-executes only the stale steps: the ones whose inputs changed since their outputs were last produced.
+-   Re-running only stale steps saves time, but it is also the mechanism that makes an analysis reproducible.
+-   The `dodo.py` file records each step, its inputs, and its outputs, so anyone can re-run the pipeline from raw data to final report.
+-   This is how real tools manage analyses end-to-end: state the graph once, and the runner tracks what to redo for you.
+-   A hand-rolled "run everything again" script is faster to write and slower to trust, because it does not record which outputs came from which inputs.

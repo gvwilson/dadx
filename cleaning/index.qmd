@@ -1,11 +1,168 @@
 # A Data Cleaning Pipeline
 
-Build a cleaning pipeline that profiles raw records, deduplicates, normalizes
-labels (incident `kind` and `status`, or species names), fills missing values,
-and validates the result, emitting a clean dataset and a data-quality report.
-Cleaning is its own kind of analysis: quality assurance.
+Build a cleaning pipeline over raw incident records for the disaster-management
+example: profile the data, deduplicate it, normalize labels, fill missing
+values, and validate the result, then emit a clean table and a small quality
+report. The same stages apply to the ecology example (normalize species names,
+drop repeated observations).
 
--   Cleaning is a pipeline of small, testable transformations.
--   Profiling first (types, ranges, missingness) tells you what needs fixing.
--   Deduplication needs a notion of "same record".
--   Every change is documented so clean data can be traced to raw data.
+-   Cleaning is a pipeline of small, testable transformations, not one big fix.
+-   Profile first: types, ranges, and missingness tell you what to fix.
+-   Deduplication needs a definition of "same record".
+-   Record the effect of every change so clean data can be traced to raw data.
+
+We fix the random seed so the dirt we inject below is the same every run, which
+makes the pipeline reproducible and testable.
+
+```python
+import random
+from datetime import datetime, timedelta
+
+import polars as pl
+
+random.seed(42)
+
+KINDS = ["storm", "flood", "power-outage", "fire"]
+STATUSES = ["reported", "assigned", "resolved"]
+SEVERITIES = ["low", "medium", "high"]
+LAT_RANGE = (40.0, 42.0)
+```
+
+Generate forty plausible records. Real data arrives this way from an ingest
+step; here we synthesize it so the lesson is self-contained.
+
+```python
+def random_timestamp():
+    start = datetime(2024, 6, 1, 0, 0, 0)
+    return start + timedelta(minutes=random.randint(0, 7 * 24 * 60))
+
+rows = []
+for i in range(40):
+    rows.append({
+        "id": i + 1,
+        "timestamp": random_timestamp(),
+        "latitude": round(random.uniform(*LAT_RANGE), 4),
+        "longitude": round(random.uniform(-76.0, -73.0), 4),
+        "kind": random.choice(KINDS),
+        "severity": random.choice(SEVERITIES),
+        "status": random.choice(STATUSES),
+        "responder_id": random.randint(100, 199),
+    })
+```
+
+Inject dirtiness, as if several sources wrote to one shared log. Each line is a
+separate defect, and each defect gets a distinct fix later.
+
+```python
+rows[5]["kind"] = "Flood"       # wrong capitalization
+rows[7]["kind"] = "flooding"    # synonym, not a controlled label
+rows[12]["status"] = "Resolved" # wrong capitalization
+rows[18]["status"] = "closed"   # synonym, not a controlled label
+rows[20]["severity"] = None     # missing value
+rows[24]["severity"] = None     # another missing value
+rows[33]["latitude"] = 999.0    # out of range
+rows[35]["latitude"] = None     # missing value
+
+rows.append(dict(rows[3]))      # the same id logged twice
+
+reentered = dict(rows[11])      # the same event re-keyed with a fresh id
+reentered["id"] = 1000
+rows.append(reentered)
+
+raw = pl.DataFrame(rows)
+raw.head()
+```
+
+Profile before fixing. Types, shape, missingness, ranges, and label counts tell
+us what is broken and how much of it there is.
+
+```python
+raw.shape
+
+raw.schema
+
+raw.null_count()
+
+raw.select(
+    pl.col("latitude").min().alias("lat_min"),
+    pl.col("latitude").max().alias("lat_max"),
+)
+
+raw.group_by("kind").agg(pl.len().alias("count"))
+
+raw.group_by("status").agg(pl.len().alias("count"))
+```
+
+Deduplicate next. "Same record" is a decision, not a property of the data: if
+the same event can be logged twice under a new id, identity is the event's
+content, not its id. We key on kind, place, and time.
+
+```python
+dup_keys = ["kind", "latitude", "longitude", "timestamp"]
+n_raw = raw.height
+deduped = raw.unique(subset=dup_keys, keep="first")
+print("removed", n_raw - deduped.height, "duplicates;", deduped.height, "rows remain")
+```
+
+Normalize the labels: lowercase everything, then map synonyms to one controlled
+value. A tiny helper makes the rule reusable and testable on its own.
+
+```python
+KIND_FIXES = {"flooding": "flood"}
+STATUS_FIXES = {"closed": "resolved"}
+
+def fix_labels(col, fixes):
+    lowered = pl.col(col).str.to_lowercase()
+    for wrong, right in fixes.items():
+        lowered = pl.when(lowered == wrong).then(pl.lit(right)).otherwise(lowered)
+    return lowered
+
+clean = deduped.with_columns(
+    fix_labels("kind", KIND_FIXES).alias("kind"),
+    fix_labels("status", STATUS_FIXES).alias("status"),
+)
+
+clean.group_by("kind").agg(pl.len().alias("count"))
+clean.group_by("status").agg(pl.len().alias("count"))
+```
+
+Fill missing severity with an explicit policy: a missing severity means "not
+recorded", so we mark it unknown rather than inventing a value or dropping the
+row.
+
+```python
+clean = clean.with_columns(pl.col("severity").fill_null("unknown").alias("severity"))
+```
+
+Validate the result against the rules we care about. Location is essential, so
+rows that cannot be placed (null or outside the study bounds) are dropped, and
+every categorical value must be in its controlled set.
+
+```python
+n_before_validate = clean.height
+clean = clean.filter(
+    pl.col("latitude").is_not_null()
+    & pl.col("latitude").is_between(*LAT_RANGE)
+    & pl.col("kind").is_in(KINDS)
+    & pl.col("status").is_in(STATUSES)
+    & pl.col("severity").is_in(SEVERITIES + ["unknown"])
+)
+
+print("dropped", n_before_validate - clean.height, "unplaceable rows")
+clean.null_count()
+```
+
+Emit the two outputs: the clean table and a quality report. The report is the
+audit trail: each count records what a stage changed, so clean data can be
+traced back to raw data. In a full pipeline you would write `clean` to Parquet
+and the report to JSON for the next stage to read.
+
+```python
+report = {
+    "rows": {"before": n_raw, "after": clean.height},
+    "duplicates_removed": n_raw - deduped.height,
+    "rows_dropped_bad_location": n_before_validate - clean.height,
+    "missing_severity_filled": raw["severity"].null_count(),
+}
+report
+```

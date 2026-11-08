@@ -1,12 +1,124 @@
 # A Funnel Pipeline
 
-Build a pipeline that traces records through a sequence of stages and reports
-the drop-off at each one. For the disaster example the stages are reported →
-triaged → dispatched → resolved; for the ecology example they are surveyed →
-identified → vouchered → published. A distinct kind of analysis: funnel and
-conversion analysis.
+Build a pipeline that traces records through an ordered sequence of stages and
+reports the drop-off at each one. For the disaster example the stages are
+reported → triaged → dispatched → resolved (the `status` field); for the ecology
+example they are surveyed → identified → vouchered → published. A distinct kind
+of analysis: funnel and conversion analysis.
 
 -   A funnel orders stages and measures conversion between them.
--   Each stage is a filter; drop-off is the complement.
+-   Each stage is a filter; drop-off is the complement of conversion.
 -   Funnels reveal where a process loses records.
--   Stage order and definition change the answer: document them.
+-   Stage order changes the answer, so write the order down before you read the
+    numbers.
+
+Start with the tools and the fixed stage order.
+
+```python
+import random
+
+import altair as alt
+import polars as pl
+
+stages = ["reported", "triaged", "dispatched", "resolved"]
+```
+
+-   A seed makes the pseudo-random sequence reproducible, so this lesson runs the
+    same every time and the numbers below can be checked against the output.
+-   Each incident has one `status`: the furthest stage it reached. To make later
+    stages progressively fewer, walk each incident forward and let a fixed
+    fraction fall off at each step.
+
+```python
+random.seed(42)
+n_incidents = 1000
+
+statuses = []
+for _ in range(n_incidents):
+    status = "reported"
+    if random.random() < 0.75:          # 75% get triaged
+        status = "triaged"
+        if random.random() < 0.70:      # 70% of those get dispatched
+            status = "dispatched"
+            if random.random() < 0.60:  # 60% of those get resolved
+                status = "resolved"
+    statuses.append(status)
+
+incidents = pl.DataFrame({"id": range(1, n_incidents + 1), "status": statuses})
+incidents.head()
+```
+
+-   Grouping by status and counting gives a histogram of final states, not a
+    funnel. A funnel counts every record that reached a stage, and a record that
+    reached a later stage also passed through the earlier ones.
+-   Give each stage an integer position, then count how many records reached a
+    stage by summing the final-status counts from that stage onward.
+
+```python
+stage_position = {name: i for i, name in enumerate(stages)}
+
+funnel = (
+    incidents.group_by("status")
+    .len()
+    .with_columns(
+        pl.col("status")
+        .replace_strict(stage_position, return_dtype=pl.Int64)
+        .alias("stage")
+    )
+    .sort("stage")
+    .with_columns(pl.col("len").cum_sum(reverse=True).alias("reached"))
+    .select("status", "reached")
+)
+funnel
+```
+
+-   `cum_sum(reverse=True)` adds the counts from the last stage back to the
+    first, so `reached` at `reported` is all incidents and `reached` at `resolved`
+    is only the survivors.
+-   Conversion is the share that moved from one stage to the next; drop-off is
+    the share that did not. They add up to one.
+
+```python
+funnel = funnel.with_columns(
+    (pl.col("reached").shift(-1) / pl.col("reached")).alias("conversion"),
+    (1 - pl.col("reached").shift(-1) / pl.col("reached")).alias("drop_off"),
+)
+funnel
+```
+
+-   The last stage has no next stage, so its conversion and drop-off are null.
+-   Plot the funnel as bars ordered by stage, with the reached count labeled on
+    each bar.
+
+```python
+bars = (
+    alt.Chart(funnel)
+    .mark_bar()
+    .encode(
+        x=alt.X("status:N", sort=stages, title="stage"),
+        y=alt.Y("reached:Q", title="incidents reached"),
+    )
+)
+
+labels = (
+    alt.Chart(funnel)
+    .mark_text(dy=-6)
+    .encode(
+        x=alt.X("status:N", sort=stages),
+        y=alt.Y("reached:Q"),
+        text="reached:Q",
+    )
+)
+
+(bars + labels).properties(title="Incident funnel")
+```
+
+-   The funnel shows the biggest drop-off is between dispatch and resolution
+    (about 40%), then between triage and dispatch (about a third), so those are
+    the transitions worth investigating first.
+-   The answer depends on stage order: "reached triaged" assumes every triaged,
+    dispatched, or resolved incident passed through triage. If a record can skip
+    a stage, or two stages are not strictly sequential, the cumulative count is
+    wrong.
+-   Check the result: the first stage's `reached` equals the total incident
+    count, and `conversion + drop_off` is 1 for every stage that has a next one.

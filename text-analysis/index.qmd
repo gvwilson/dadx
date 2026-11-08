@@ -1,10 +1,180 @@
 # A Text Analysis Pipeline
 
-Build a pipeline that tokenizes free text (e.g., incident report descriptions or
-field notes on an observation) counts terms, and scores documents with TF-IDF
-to find what distinguishes them. A distinct kind of analysis: text mining.
+Build a pipeline that turns free text (incident report descriptions, or the
+field notes on an observation) into tokens, counts terms, and scores documents
+with TF-IDF so the terms that distinguish one report from another stand out. A
+distinct kind of analysis: text mining.
 
--   Tokenization and normalization turn free text into countable units.
--   Term frequency is a start; TF-IDF down-weights common terms.
--   A document becomes a vector of term weights.
--   Text pipelines need the same cleaning and validation as numeric ones.
+-   Tokenization turns free text into countable units.
+-   Term frequency is a start; TF-IDF down-weights terms that appear everywhere.
+-   A document becomes a vector of term weights, so text can be compared like numbers.
+-   Text needs the same cleaning and validation as numeric data.
+
+## From text to tokens
+
+-   Incident reports arrive as free text, not as rows and columns, so the first
+    job is to turn each report into units we can count.
+-   A token is one countable unit, here a single whitespace-separated word.
+-   The ecology twin is the same shape: field notes stand in for report
+    descriptions and run through the same code.
+-   Our tokenizer does three things: lowercase, strip punctuation, and split on
+    whitespace.
+
+```python
+import math
+import string
+from collections import Counter
+
+import polars as pl
+```
+
+```python
+DESCRIPTIONS = {
+    "d1": "flood water basement",
+    "d2": "storm downed power line",
+    "d3": "flood road closed",
+    "d4": "storm power outage reported",
+    "d5": "flood water rising",
+}
+
+
+def tokenize(text):
+    text = text.lower()
+    text = text.translate(str.maketrans("", "", string.punctuation))
+    return text.split()
+
+
+tokenized = {doc_id: tokenize(text) for doc_id, text in DESCRIPTIONS.items()}
+for doc_id, toks in tokenized.items():
+    print(doc_id, toks)
+```
+
+-   Lowercasing turns "Flood" and "flood" into the same token, which is what we
+    want when we count.
+-   `str.translate` with `str.maketrans("", "", string.punctuation)` removes
+    punctuation in one pass.
+-   Splitting on whitespace is the simplest possible tokenizer; a real pipeline
+    would also handle contractions, numbers, and domain jargon.
+
+## Count terms
+
+-   The simplest summary of a document is how often each term appears, its term
+    frequency.
+-   `collections.Counter` turns a list of tokens into counts in one call.
+-   Divide each count by the number of tokens so a longer document does not
+    automatically score higher.
+
+```python
+def term_frequencies(tokens):
+    counts = Counter(tokens)
+    total = len(tokens)
+    return {term: count / total for term, count in counts.items()}
+
+
+for doc_id, toks in tokenized.items():
+    tf = term_frequencies(toks)
+    print(doc_id, {t: round(f, 3) for t, f in tf.items()})
+```
+
+-   d2 and d4 have four tokens, so their frequencies are 0.25 instead of a
+    third; normalizing by length keeps the comparison fair.
+
+## Down-weight common terms
+
+-   Term frequency is a start, but "flood" appears in three of five reports and
+    tells us little about any single one.
+-   Document frequency counts how many documents contain a term.
+-   Inverse document frequency (IDF) is high for rare terms and low for common
+    ones: it is the log of total documents over document frequency.
+
+```python
+def document_frequencies(docs):
+    df = Counter()
+    for toks in docs.values():
+        for term in set(toks):
+            df[term] += 1
+    return df
+
+
+doc_freq = document_frequencies(tokenized)
+print(doc_freq)
+```
+
+```python
+n_docs = len(DESCRIPTIONS)
+
+
+def idf_weights(df, n):
+    return {term: math.log(n / count) for term, count in df.items()}
+
+
+idf = idf_weights(doc_freq, n_docs)
+print({t: round(w, 3) for t, w in idf.items()})
+```
+
+-   A term that appears in every document has document frequency equal to the
+    total, so its IDF is log(1), which is zero.
+-   Terms unique to one document get the highest IDF, about 1.609 here.
+
+## TF-IDF
+
+-   TF-IDF multiplies term frequency by inverse document frequency.
+-   A term scores high only if it is frequent in this document and rare in the
+    others, which is exactly what distinguishes one report from the rest.
+
+```python
+def tfidf(tf, idf):
+    return {term: freq * idf[term] for term, freq in tf.items()}
+
+
+scores = {
+    doc_id: tfidf(term_frequencies(toks), idf)
+    for doc_id, toks in tokenized.items()
+}
+for doc_id, w in scores.items():
+    print(doc_id, {t: round(x, 3) for t, x in w.items()})
+```
+
+## Documents as vectors
+
+-   A document is now a vector of term weights, one dimension per term.
+-   Most entries are zero because most terms do not appear in most documents.
+-   Gather the weights into a tidy Polars frame, one row per document-term pair,
+    then pivot into a document-by-term matrix.
+
+```python
+rows = []
+for doc_id, weights in scores.items():
+    for term, weight in weights.items():
+        rows.append({"doc": doc_id, "term": term, "weight": round(weight, 3)})
+weights_df = pl.DataFrame(rows)
+weights_df.sort("weight", descending=True)
+```
+
+```python
+matrix = weights_df.pivot(on="term", index="doc", values="weight")
+matrix = matrix.fill_null(0.0)
+matrix
+```
+
+-   Pivot spreads the `term` column into one column per term, and
+    `fill_null(0.0)` records the terms absent from a document as zero.
+-   The top-weighted term in each document is the one that separates it from the
+    others.
+
+```python
+top_terms = weights_df.group_by("doc").agg(
+    pl.col("term").sort_by("weight", descending=True).first().alias("top_term"),
+    pl.col("weight").sort_by("weight", descending=True).first().alias("top_weight"),
+)
+top_terms.sort("doc")
+```
+
+-   Each document's top term appears in that document alone, which is why its
+    IDF, and therefore its TF-IDF, is high.
+-   Text needs the same cleaning as numbers: lowercase before comparing, strip
+    punctuation, and decide what to do about typos and near-duplicates.
+-   The ecology twin swaps incident descriptions for field notes and runs the
+    same pipeline unchanged.
+-   A real pipeline would next remove stopwords and stem words; the standard
+    library gives us the counting pieces, and we assemble the rest ourselves.

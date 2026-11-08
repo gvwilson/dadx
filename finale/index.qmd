@@ -1,6 +1,18 @@
 # Conclusion
 
-Recap the theme: each lesson built a small version of a real pipeline of a
-different kind using mature tools rather than rebuilding them. The practices
-(verify, document, reproduce) matter more than any single technique, and are
-what to carry into whatever comes next.
+- This book built small versions of real analysis pipelines rather than toy examples.
+- Every lesson paired a pipeline of a different kind with one of two running examples.
+- The first running example was a volunteer disaster-response group coordinating work.
+- The second running example was a field survey collecting ecological data.
+- The through-line: take a real problem, shrink it, and solve it with mature tools.
+- We used existing, battle-tested tools instead of rebuilding them from scratch.
+- "Mature tools" meant libraries and programs that already handle the hard edge cases.
+- Each pipeline covered the same shape: ingest, clean, analyze, report.
+- The specific techniques changed from lesson to lesson, but the shape did not.
+- Verify: check your work against a known answer before trusting it.
+- Document: write down what you did and why, for your future self and for others.
+- Reproduce: make the whole run repeatable, so results can be checked and built on.
+- The habits matter more than any single technique in the book.
+- Tools and libraries change; the practices of verification, documentation, and reproduction do not.
+- Carry those three habits into whatever analysis you tackle next.
+- Start small, use what already exists, and leave a trail someone else can follow.

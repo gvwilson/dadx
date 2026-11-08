@@ -1,10 +1,220 @@
 # An ETL Pipeline from the Web
 
-Build an ingestion pipeline that fetches data from a public API with httpx,
-transforms it, and loads it into DuckDB, handling pagination, rate limits, and
-caching. A distinct kind of analysis: extract, transform, load.
+Build a pipeline that ingests storm reports from a web API, transforms the JSON
+into rows, and loads them into DuckDB, following pagination, a rate limit, and a
+cache along the way. The disaster twin fetches storm reports; the ecology twin
+fetches species observations from the same shape of endpoint.
 
 -   ETL is ingest → transform → load, and the ingest step is often the web.
--   httpx fetches; we add pagination, rate limits, and caching around it.
--   Cache responses so re-runs don't re-fetch (or re-bill) the source.
--   A mock server lets us test the pipeline offline.
+-   httpx fetches; we add pagination, a rate limit, and a cache around it.
+-   A cache keyed by URL stops a re-run from re-fetching the source.
+-   A mock server serves the pages locally, so the pipeline runs offline.
+
+## A mock server
+
+-   Real APIs need accounts, network access, and rate limits, so we stand up a
+    tiny HTTP server that serves a fixed payload instead.
+-   The stdlib `http.server` gives us a handler class and a threaded server.
+-   Running the server in a background thread keeps the notebook responsive.
+
+```python
+import json
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import urlparse, parse_qs
+```
+
+-   The payload is six storm reports: one per event, with a severity, a
+    position, and the time it was reported.
+-   We will serve them two pages at a time, the way a real API paginates.
+
+```python
+REPORTS = [
+    {"id": 1, "event": "cyclone", "severity": 4, "latitude": -32.5, "longitude": 141.2, "reported": "2024-06-01T08:12:00"},
+    {"id": 2, "event": "flash-flood", "severity": 3, "latitude": -33.1, "longitude": 142.9, "reported": "2024-06-01T13:05:00"},
+    {"id": 3, "event": "windstorm", "severity": 2, "latitude": -31.8, "longitude": 143.5, "reported": "2024-06-02T09:30:00"},
+    {"id": 4, "event": "cyclone", "severity": 5, "latitude": -32.2, "longitude": 141.8, "reported": "2024-06-03T18:45:00"},
+    {"id": 5, "event": "hail", "severity": 1, "latitude": -34.0, "longitude": 140.6, "reported": "2024-06-04T11:20:00"},
+    {"id": 6, "event": "flash-flood", "severity": 2, "latitude": -32.9, "longitude": 142.1, "reported": "2024-06-05T07:55:00"},
+]
+PAGE_SIZE = 3
+```
+
+-   The handler answers `GET /reports?page=N` with one page of JSON.
+-   The `next` field is the following page number, or `null` on the last page,
+    so a client can follow the chain without knowing the total in advance.
+-   `log_message` is silenced so the request log does not clutter the output.
+
+```python
+class StormHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        parsed = urlparse(self.path)
+        query = parse_qs(parsed.query)
+        page = int(query.get("page", ["1"])[0])
+        start = (page - 1) * PAGE_SIZE
+        items = REPORTS[start : start + PAGE_SIZE]
+        next_page = page + 1 if start + PAGE_SIZE < len(REPORTS) else None
+        body = json.dumps({"page": page, "next": next_page, "items": items}).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, *args):
+        pass
+```
+
+-   Bind to port 0 to let the operating system pick a free port, then read the
+    port back from the socket.
+-   The server runs in a daemon thread, so it stops when the process exits.
+
+```python
+server = ThreadingHTTPServer(("127.0.0.1", 0), StormHandler)
+port = server.server_address[1]
+threading.Thread(target=server.serve_forever, daemon=True).start()
+BASE_URL = f"http://127.0.0.1:{port}"
+```
+
+## Fetch with a cache
+
+-   `httpx.get` is the workhorse: it makes the request and returns a response
+    whose `.json()` parses the body.
+-   `raise_for_status` turns a failed request (a 404 or 500) into an exception
+    instead of letting bad data flow silently onward.
+-   A `dict` keyed by URL is a tiny cache: a re-run returns the stored value
+    and never touches the network.
+
+```python
+import httpx
+
+cache = {}
+fetch_count = 0
+
+def fetch(url):
+    global fetch_count
+    if url in cache:
+        return cache[url]
+    fetch_count += 1
+    response = httpx.get(url)
+    response.raise_for_status()
+    data = response.json()
+    cache[url] = data
+    return data
+```
+
+-   `fetch_count` counts only real requests, so we can prove the cache works.
+
+## Paginate and rate-limit
+
+-   Follow the `next` pointer page by page until it is `null`, collecting every
+    item into one list.
+-   `time.sleep` between pages is a crude rate limit: a real pipeline would
+    also read the server's rate-limit headers and back off when asked.
+
+```python
+import time
+
+def fetch_all(base_url):
+    rows = []
+    page = 1
+    while True:
+        url = f"{base_url}/reports?page={page}"
+        data = fetch(url)
+        rows.extend(data["items"])
+        if data["next"] is None:
+            break
+        page = data["next"]
+        time.sleep(0.05)
+    return rows
+
+reports = fetch_all(BASE_URL)
+print("reports:", len(reports))
+print("HTTP requests so far:", fetch_count)
+```
+
+## Transform
+
+-   Transform picks the fields we want and puts them in a fixed order, so the
+    loader does not depend on the exact shape of the JSON.
+-   It returns a tuple, which DuckDB can bind directly in an insert.
+
+```python
+def transform(item):
+    return (
+        item["id"],
+        item["event"],
+        item["severity"],
+        item["latitude"],
+        item["longitude"],
+        item["reported"],
+    )
+
+rows = [transform(r) for r in reports]
+rows[0]
+```
+
+## Load into DuckDB
+
+-   An in-memory database is enough for a lesson; swap the connection string
+    for a file path to persist it.
+-   The schema names each column and its type, which is the contract the rest
+    of the analysis relies on.
+
+```python
+import duckdb
+
+con = duckdb.connect(":memory:")
+con.execute("""
+CREATE TABLE storm_reports (
+    id INTEGER,
+    event VARCHAR,
+    severity INTEGER,
+    latitude DOUBLE,
+    longitude DOUBLE,
+    reported TIMESTAMP
+)
+""")
+```
+
+-   `executemany` inserts the whole batch in one call, binding each `?` to a
+    value from a tuple.
+-   The ISO timestamp string is cast to a real `TIMESTAMP` by the engine.
+
+```python
+con.executemany("INSERT INTO storm_reports VALUES (?, ?, ?, ?, ?, ?)", rows)
+print(con.execute("SELECT COUNT(*) FROM storm_reports").fetchone())
+```
+
+-   Now the data is queryable with ordinary SQL.
+
+```python
+con.execute(
+    """
+    SELECT event, COUNT(*) AS n, AVG(severity) AS avg_severity
+    FROM storm_reports
+    GROUP BY event
+    ORDER BY n DESC
+    """
+).fetchall()
+```
+
+## Re-run from the cache
+
+-   Fetch everything again: every URL is already cached, so no new HTTP
+    request is made.
+-   That matters in a real job, where a re-fetch may cost money or hit a rate
+    limit.
+
+```python
+reports_again = fetch_all(BASE_URL)
+print("reports:", len(reports_again))
+print("HTTP requests so far:", fetch_count)
+```
+
+-   The ecology twin is the same pipeline with a different payload: fetch
+    paginated species observations from iNaturalist or GBIF, transform each
+    record into `species`, `count`, `latitude`, and `longitude`, and load into
+    the same kind of table.
+-   Only the endpoint URL and the field names change; the fetch, paginate,
+    cache, and load steps carry over unchanged.

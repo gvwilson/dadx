@@ -9,3 +9,198 @@ predictive modeling with a categorical outcome.
 -   A confusion matrix shows the kinds of errors a classifier makes.
 -   Accuracy alone misleads when classes are imbalanced.
 -   The right metric depends on the cost of each kind of error.
+
+## A synthetic incident table
+
+-   We predict whether a disaster incident escalates from two features: its
+    severity and its kind.
+-   The ecology twin predicts species from an observation's mass and length; the
+    same code runs with the columns renamed.
+-   Start by pinning the seed, then generate rows.
+
+```python
+import random
+
+import polars as pl
+
+SEED = 20261108
+random.seed(SEED)
+```
+
+-   `random.seed` makes the generator reproducible: the same seed gives the same
+    rows every run, so a colleague can re-run and check the whole pipeline.
+
+```python
+KINDS = ["storm", "flood", "power-outage", "fire"]
+KIND_BASE = {"storm": 0.02, "flood": 0.05, "power-outage": 0.00, "fire": 0.10}
+SEVERITY_CHANCE = {1: 0.05, 2: 0.08, 3: 0.12, 4: 0.50, 5: 0.75}
+
+def make_incidents(n):
+    rows = []
+    for i in range(1, n + 1):
+        kind = random.choice(KINDS)
+        severity = random.randint(1, 5)
+        chance = min(1.0, SEVERITY_CHANCE[severity] + KIND_BASE[kind])
+        escalated = 1 if random.random() < chance else 0
+        rows.append(
+            {"id": i, "kind": kind, "severity": severity, "escalated": escalated}
+        )
+    return rows
+
+incidents = make_incidents(500)
+df = pl.DataFrame(incidents)
+df.head()
+```
+
+-   `escalated` is the label we will predict: 1 means the incident escalates, 0
+    means it does not.
+-   The chance of escalation rises sharply with severity, and fires escalate
+    more often than power outages, so there is a real signal for a model to
+    find.
+-   The label is imbalanced: most incidents do not escalate.
+
+```python
+rate = df["escalated"].mean()
+print(f"escalation rate: {rate:.0%}")
+```
+
+## Split and fit
+
+-   Fit on one part of the data and evaluate on the rest, so the score reflects
+    how the model does on rows it has not seen.
+-   The rows are already in random order, so the first 80% and last 20% form a
+    fair split.
+
+```python
+n_train = int(len(df) * 0.8)
+train = df.slice(0, n_train)
+test = df.slice(n_train, len(df) - n_train)
+print(f"train: {len(train)} rows, test: {len(test)} rows")
+```
+
+-   Our classifier is a threshold rule: predict escalation when severity is at
+    least some cutoff.
+-   It is crude but transparent, and a real pipeline often starts with a simple
+    rule before reaching for something fancier.
+
+```python
+def predict(severity, threshold):
+    return 1 if severity >= threshold else 0
+```
+
+-   To fit the rule, try each cutoff on the training data and keep the one that
+    best balances precision and recall.
+-   First we need to count the four kinds of outcomes, and turn those counts
+    into scores.
+
+```python
+def confusion(y_true, y_pred):
+    tp = fp = tn = fn = 0
+    for t, p in zip(y_true, y_pred):
+        if t == 1 and p == 1:
+            tp += 1
+        elif t == 1 and p == 0:
+            fn += 1
+        elif t == 0 and p == 1:
+            fp += 1
+        else:
+            tn += 1
+    return {"tp": tp, "fp": fp, "tn": tn, "fn": fn}
+
+def stats(cm):
+    tp, fp, tn, fn = cm["tp"], cm["fp"], cm["tn"], cm["fn"]
+    accuracy = (tp + tn) / (tp + fp + tn + fn)
+    precision = tp / (tp + fp) if (tp + fp) else 0.0
+    recall = tp / (tp + fn) if (tp + fn) else 0.0
+    f1 = (
+        2 * precision * recall / (precision + recall)
+        if (precision + recall)
+        else 0.0
+    )
+    return accuracy, precision, recall, f1
+```
+
+-   A true positive is an escalation we caught; a true negative is a
+    non-escalation we correctly ignored.
+-   A false positive is a false alarm; a false negative is an escalation we
+    missed.
+-   Precision is the fraction of our alarms that were real; recall is the
+    fraction of real escalations we caught.
+-   F1 is their harmonic mean, a single number that rewards both at once.
+
+```python
+train_true = train["escalated"].to_list()
+train_sev = train["severity"].to_list()
+
+best_threshold, best_f1 = None, -1.0
+for threshold in range(1, 6):
+    preds = [predict(s, threshold) for s in train_sev]
+    score = stats(confusion(train_true, preds))[3]
+    if score > best_f1:
+        best_threshold, best_f1 = threshold, score
+    print(f"threshold {threshold}: F1 = {score:.2f}")
+
+print(f"chosen threshold: severity >= {best_threshold}")
+```
+
+## Predict and evaluate
+
+-   Apply the chosen threshold to the test data, which the fit never saw.
+
+```python
+test_true = test["escalated"].to_list()
+test_sev = test["severity"].to_list()
+test_pred = [predict(s, best_threshold) for s in test_sev]
+
+cm = confusion(test_true, test_pred)
+print("confusion matrix")
+print("              predicted")
+print("               no   yes")
+print(f"actual no    {cm['tn']:>4}  {cm['fp']:>4}")
+print(f"actual yes   {cm['fn']:>4}  {cm['tp']:>4}")
+```
+
+-   The matrix has four cells: true negatives top left, false positives top
+    right, false negatives bottom left, true positives bottom right.
+-   The diagonal is correct answers; the off-diagonal is two different kinds of
+    mistake.
+
+```python
+accuracy, precision, recall, f1 = stats(cm)
+print(f"accuracy  = {accuracy:.2f}")
+print(f"precision = {precision:.2f}")
+print(f"recall    = {recall:.2f}")
+print(f"F1        = {f1:.2f}")
+```
+
+## Why accuracy alone misleads
+
+-   Accuracy is the fraction of rows we got right, but on imbalanced data a
+    trivial rule can score well.
+-   A classifier that always says "no escalation" gets every non-escalation
+    right and only misses the rare escalations.
+
+```python
+never_pred = [0] * len(test_true)
+never_cm = confusion(test_true, never_pred)
+never_acc, _, never_recall, _ = stats(never_cm)
+print(f"always-no accuracy = {never_acc:.2f}")
+print(f"always-no recall   = {never_recall:.2f}")
+```
+
+-   With about a third of incidents escalating, "always no" is right roughly
+    two times in three, yet it catches none of the escalations.
+-   Its accuracy is just the share of the majority class, which is why the
+    number alone is deceptive.
+-   Accuracy hides that failure; recall exposes it.
+-   Which metric matters depends on the cost of each kind of error.
+-   If a missed escalation costs lives, prefer high recall: we would rather send
+    some false alarms than miss one real escalation.
+-   If every alarm sends a crew and crews are scarce, prefer high precision: we
+    would rather miss an occasional escalation than waste a crew.
+-   There is no single best metric; there is a metric that matches the decision
+    the model feeds.
+
+-   The ecology twin is the same shape: predict `species` from `mass_g` and
+    `length_mm`, and judge the result with the same confusion matrix.
+-   Rename the label, swap the feature columns, and the pipeline runs unchanged.

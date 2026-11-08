@@ -1,19 +1,36 @@
 # Introduction
 
-The best way to learn data analysis is to study examples, so these lessons
-build small versions of real analysis pipelines, each of a different kind.
-This lesson defines what a pipeline is (ingest, clean, explore, model,
-communicate) and introduces the course's two running examples, which share the
-same data shapes so that every lesson works against either:
-
--   Disaster management: a volunteer group coordinating response to
-    storms, floods, and other local disasters (for software-oriented learners).
--   Ecological data collection: a field survey recording organisms and
-    environmental conditions at study sites (for science-oriented learners).
--   A data analysis pipeline is a chain of small, checkable steps.
--   There are many kinds of analysis; this course samples them rather than
-    drilling one.
--   We use mature tools (Polars, DuckDB, Vega-Altair, httpx) instead of
-    building our own.
--   Reproducibility means recording every step so an analysis can be re-run
-    and audited.
+- This book teaches introductory data science by building small versions of real analysis pipelines.
+- A data analysis pipeline is a chain of small, checkable steps.
+- The main stages are ingest, clean, explore, model, and communicate.
+- Ingest: get raw data into a form the computer can read.
+- Clean: fix types, missing values, and inconsistencies.
+- Explore: summarize and visualize to see what the data contains.
+- Model: fit a statistical or computational model to answer a question.
+- Communicate: report findings so others can trust and reuse them.
+- Each stage produces something the next stage can consume.
+- We study examples rather than memorize functions.
+- Examples teach judgment, like when a technique fits and when it fails.
+- Memorized functions fade; worked pipelines show how pieces connect.
+- The book uses two running examples that share the same data shapes.
+- Matching shapes means code and ideas transfer from one example to the other.
+- Example one: disaster management, a volunteer emergency-response group.
+- Its tables are responders and incidents, plus a time series called readings.
+- The responders table records id, name, joined, and role.
+- The incidents table records id, timestamp, latitude, longitude, kind, severity, status, and responder_id.
+- Incident kind is one of storm, flood, power-outage, or fire.
+- Incident status moves from reported to triaged to dispatched to resolved.
+- The readings series records timestamp, station_id, river_level, rainfall_mm, and wind_speed.
+- Example two: ecological data collection, a field survey.
+- Its tables are sites and observations, plus a time series called environment.
+- The sites table records id, latitude, longitude, and habitat.
+- The observations table records id, site_id, species, count, mass_g, length_mm, and date.
+- The environment series records date, site_id, temperature_c, and pollution_ppm.
+- Both examples pair a small static table with a larger event table and a time series.
+- We use mature tools instead of rebuilding them.
+- The tools are Polars, DuckDB, Vega-Altair (imported as altair), httpx, and doit.
+- Mature tools are tested, documented, and faster to learn than custom code.
+- Reproducibility means recording every step.
+- A reproducible analysis can be re-run from raw data to final result.
+- Recording steps also lets others audit and correct the work.
+- Each lesson later in the book turns one stage of a pipeline into a small, runnable example.

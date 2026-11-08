@@ -1,10 +1,229 @@
 # A SQL Pipeline with DuckDB
 
-Build the same analytical workflow in declarative SQL using DuckDB, and see how
-using a database engine differs from dataframe code.
+Build the same analytical workflow we have been doing with Polars, but express
+it in declarative SQL through DuckDB. The questions are the same; the way we
+ask them is different.
 
--   SQL says what you want; the engine decides how to compute it.
--   SELECT, WHERE, GROUP, and JOIN mirror the dataframe operations already
-    used.
--   DuckDB's columnar engine is optimized for analytical queries.
--   Two tools (dataframe and relational DB) solve the same problems.
+-   Polars code names the operations to run; SQL names the answer we want.
+-   SELECT, WHERE, GROUP BY, and JOIN are the SQL twins of `select`, `filter`, `group_by`, and `join`.
+-   DuckDB is a columnar engine built for exactly these analytical queries.
+-   A dataframe and a relational table are two mental models of the same data.
+
+## Build the data
+
+-   We reuse the disaster example: a small `responders` table and a larger `incidents` table.
+-   Pin the random seed so every run produces the same rows.
+
+```python
+import random
+from datetime import date, datetime, timedelta
+
+import duckdb
+import polars as pl
+
+SEED = 20261108
+random.seed(SEED)
+```
+
+-   `responders` has one row per person: an id, a name, a join date, and a role.
+
+```python
+FIRST = ["Ada", "Grace", "Alan", "Edsger", "Barbara", "Donald", "Kathleen", "John"]
+LAST = ["Lovelace", "Hopper", "Turing", "Dijkstra", "Liskov", "Knuth", "Booth", "Backus"]
+ROLES = ["dispatcher", "field-officer", "medic", "coordinator"]
+
+start = date(2024, 1, 1)
+responders = pl.DataFrame({
+    "id": range(1, 9),
+    "name": [f"{random.choice(FIRST)} {random.choice(LAST)}" for _ in range(8)],
+    "joined": [(start + timedelta(days=random.randint(0, 365))).isoformat() for _ in range(8)],
+    "role": [random.choice(ROLES) for _ in range(8)],
+})
+responders
+```
+
+-   `incidents` has one row per report, with `responder_id` pointing back at a person.
+
+```python
+KINDS = ["storm", "flood", "power-outage", "fire"]
+STATUSES = ["reported", "triaged", "dispatched", "resolved"]
+
+n = 24
+base = datetime(2024, 6, 1)
+incidents = pl.DataFrame({
+    "id": range(1, n + 1),
+    "timestamp": [
+        (base + timedelta(days=random.randint(0, 60), hours=random.randint(0, 23))).isoformat()
+        for _ in range(n)
+    ],
+    "latitude": [round(random.uniform(-40.0, -30.0), 4) for _ in range(n)],
+    "longitude": [round(random.uniform(140.0, 150.0), 4) for _ in range(n)],
+    "kind": [random.choice(KINDS) for _ in range(n)],
+    "severity": [random.randint(1, 5) for _ in range(n)],
+    "status": [random.choice(STATUSES) for _ in range(n)],
+    "responder_id": [random.randint(1, 8) for _ in range(n)],
+})
+incidents
+```
+
+## Load into DuckDB
+
+-   DuckDB is an embedded database: it runs inside our process, with no server to start.
+-   The schema names each column and its type, which is the contract the rest of the analysis relies on.
+-   We create the tables with SQL DDL, then insert the Polars rows in one batch.
+-   (`con.register` can attach a Polars or pandas frame directly, but that path needs PyArrow; DDL keeps this lesson dependency-free.)
+
+```python
+con = duckdb.connect()
+
+con.execute("""
+CREATE TABLE responders (
+    id INTEGER,
+    name VARCHAR,
+    joined DATE,
+    role VARCHAR
+)
+""")
+con.executemany(
+    "INSERT INTO responders VALUES (?, ?, ?, ?)",
+    responders.rows(),
+)
+
+con.execute("""
+CREATE TABLE incidents (
+    id INTEGER,
+    timestamp TIMESTAMP,
+    latitude DOUBLE,
+    longitude DOUBLE,
+    kind VARCHAR,
+    severity INTEGER,
+    status VARCHAR,
+    responder_id INTEGER
+)
+""")
+con.executemany(
+    "INSERT INTO incidents VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    incidents.rows(),
+)
+```
+
+-   `executemany` binds each `?` placeholder to a value and inserts the whole batch in one call.
+-   The ISO timestamp strings are cast to real `TIMESTAMP` and `DATE` values by the engine.
+
+## SELECT and WHERE
+
+-   `SELECT` picks columns; `WHERE` picks rows. Together they are Polars' `select` and `filter`.
+-   SQL names the columns you want; the engine decides how to fetch them.
+
+```python
+con.execute("SELECT id, kind, severity FROM incidents LIMIT 3").fetchall()
+```
+
+```python
+incidents.select(["id", "kind", "severity"]).head(3)
+```
+
+-   Filtering is a `WHERE` clause, and ordering is `ORDER BY`.
+
+```python
+con.execute("""
+SELECT id, kind, severity
+FROM incidents
+WHERE severity >= 4
+ORDER BY severity DESC
+""").fetchall()
+```
+
+```python
+(
+    incidents
+    .filter(pl.col("severity") >= 4)
+    .select(["id", "kind", "severity"])
+    .sort("severity", descending=True)
+)
+```
+
+-   Note the difference in mood: SQL states the condition as one declarative sentence; Polars spells out each step in order.
+
+## GROUP BY
+
+-   Aggregation is `GROUP BY`: split rows into buckets, then compute one number per bucket.
+
+```python
+con.execute("""
+SELECT kind, COUNT(*) AS n
+FROM incidents
+GROUP BY kind
+ORDER BY n DESC
+""").fetchall()
+```
+
+```python
+incidents.group_by("kind").agg(pl.len().alias("n")).sort("n", descending=True)
+```
+
+-   `COUNT(*)` is `pl.len()`, and the alias `AS n` is `.alias("n")`.
+-   Both engines push the counting into optimized C code rather than a Python loop.
+
+## JOIN
+
+-   A `JOIN` matches rows in two tables on a shared column, exactly like Polars' `join`.
+-   Here we attach each responder's name to the incidents they handled.
+
+```python
+con.execute("""
+SELECT i.id, i.kind, r.name
+FROM incidents AS i
+JOIN responders AS r ON i.responder_id = r.id
+ORDER BY i.id
+LIMIT 5
+""").fetchall()
+```
+
+```python
+(
+    incidents
+    .join(responders, left_on="responder_id", right_on="id", how="inner")
+    .select(["id", "kind", "name"])
+    .head(5)
+)
+```
+
+-   `AS` gives a table a short alias so column references read clearly.
+-   `left_on` and `right_on` are the Polars mirror of SQL's `ON i.responder_id = r.id`.
+-   A `LEFT JOIN` would keep every incident even when a responder id was missing; here every id matches, so inner and left agree.
+
+## Aggregating with expressions
+
+-   Real questions combine operations: count incidents per status and show the average severity.
+
+```python
+con.execute("""
+SELECT status, COUNT(*) AS n, ROUND(AVG(severity), 2) AS avg_severity
+FROM incidents
+GROUP BY status
+ORDER BY n DESC
+""").fetchall()
+```
+
+```python
+(
+    incidents
+    .group_by("status")
+    .agg(
+        pl.len().alias("n"),
+        pl.col("severity").mean().round(2).alias("avg_severity"),
+    )
+    .sort("n", descending=True)
+)
+```
+
+-   Same shape, same answer: SQL reads as one sentence, Polars as a chain of verbs.
+
+## Two mental models
+
+-   A dataframe and a relational table are two views of the same rectangle of data.
+-   Polars is imperative: you write the sequence of operations to run.
+-   SQL is declarative: you write the result you want and let the optimizer choose the order.
+-   DuckDB's columnar engine reads only the columns a query touches, which is why it is fast on analytics.
+-   Neither model is universally better; learning both means you can read other people's code in either style.
