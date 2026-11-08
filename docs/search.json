@@ -14,7 +14,7 @@
     "href": "intro/index.html",
     "title": "1  Introduction",
     "section": "",
-    "text": "The best way to learn data analysis is to study examples, so these lessons build small versions of real analysis pipelines — each of a different kind — rather than reimplementing the tools those pipelines use. This lesson defines what a pipeline is (ingest, clean, explore, model, communicate), introduces the running example — a web service and its operations — and sets the through-line: we use mature tools and build analyses, not libraries.\n\nA data analysis pipeline is a chain of small, checkable steps.\nThere are many kinds of analysis; this course samples them rather than drilling one.\nWe use mature tools (Polars, DuckDB, Vega-Altair, httpx) instead of rebuilding them.\nReproducibility means recording every step so an analysis can be re-run and audited.",
+    "text": "The best way to learn data analysis is to study examples, so these lessons build small versions of real analysis pipelines, each of a different kind. This lesson defines what a pipeline is (ingest, clean, explore, model, communicate) and introduces the running example (a web service and its operation).\n\nA data analysis pipeline is a chain of small, checkable steps.\nThere are many kinds of analysis; this course samples them rather than drilling one.\nWe use mature tools (Polars, DuckDB, Vega-Altair, httpx) instead of rebuilding them.\nReproducibility means recording every step so an analysis can be re-run and audited.",
     "crumbs": [
       "<span class='chapter-number'>1</span>  <span class='chapter-title'>Introduction</span>"
     ]
@@ -24,7 +24,7 @@
     "href": "gen-eventlog/index.html",
     "title": "2  An Event Log Generator",
     "section": "",
-    "text": "Build the primary dataset: a web service’s event stream — a table of users and a table of events (requests, signups, deployments, errors) linked to them by user ID, generated from seeded randomness and written as CSV. This is the first of two generators; later lessons analyze its output and can check their answers against the truth it encodes.\n\nA seed makes pseudo-random numbers reproducible.\nSynthetic events let us know the “right answer” (for example, which version was slower).\nA generator documents the assumptions baked into the data.\nCSV is a simple, portable exchange format.",
+    "text": "Build the primary dataset: a web service’s event stream linking a table of users and a table of events (requests, signups, deployments, errors) by user ID, generated from seeded randomness and written as CSV. This is the first of two generators; later lessons analyze its output and can check their answers against the truth it encodes.\n\nA seed makes pseudo-random numbers reproducible.\nSynthetic events let us know the “right answer” (for example, which version was slower).\nA generator documents the assumptions baked into the data.\nCSV is a simple, portable exchange format.",
     "crumbs": [
       "<span class='chapter-number'>2</span>  <span class='chapter-title'>An Event Log Generator</span>"
     ]
@@ -34,7 +34,7 @@
     "href": "pipeline/index.html",
     "title": "3  Your First Pipeline",
     "section": "",
-    "text": "Build a small end-to-end exploratory pipeline: read the event log, clean the obvious problems, summarize it (requests per endpoint, latency, error rate), and plot the result. Along the way, meet the tools this course relies on — reading CSV, selecting and filtering columns, grouping and joining, reshaping, and computing basic statistics — as libraries to call, not things to reimplement.\n\nA pipeline is ingest → clean → explore → summarize → communicate.\nPolars reads CSVs and does select, filter, group, join, and reshape for us.\nBasic descriptive statistics come from the library, not hand-rolled code.\nEvery pipeline ends by checking its answer, ideally against known truth.",
+    "text": "Build a small end-to-end exploratory pipeline: read the event log, clean the obvious problems, summarize it (requests per endpoint, latency, error rate), and plot the result. Along the way, meet the tools this course relies on: reading CSV, selecting and filtering columns, grouping and joining, reshaping, and computing basic statistics.\n\nA pipeline is ingest → clean → explore → summarize → communicate.\nPolars reads CSVs and does select, filter, group, join, and reshape for us.\nBasic descriptive statistics come from the library, not hand-rolled code.\nEvery pipeline ends by checking its answer, ideally against known truth.",
     "crumbs": [
       "<span class='chapter-number'>3</span>  <span class='chapter-title'>Your First Pipeline</span>"
     ]
@@ -44,7 +44,7 @@
     "href": "management/index.html",
     "title": "4  Data Dictionaries and Provenance",
     "section": "",
-    "text": "Build the metadata layer of a pipeline: a data dictionary that records each field’s name, type, units, meaning, and allowed values — for fields such as timestamp, endpoint, status_code, and latency_ms — and a provenance log that records each step’s inputs and outputs.\n\nMetadata (data about data) is data too.\nA data dictionary is a contract between producer and consumer.\nProvenance lets someone reconstruct how a result was derived.\nReproducibility is impossible without provenance.",
+    "text": "Build the metadata layer of a pipeline: a data dictionary that records each field’s name, type, units, meaning, and allowed values for various fields, and a provenance log that records each step’s inputs and outputs.\n\nMetadata (data about data) is data too.\nA data dictionary is a contract between producer and consumer.\nProvenance lets someone reconstruct how a result was derived.\nReproducibility is impossible without provenance.",
     "crumbs": [
       "<span class='chapter-number'>4</span>  <span class='chapter-title'>Data Dictionaries and Provenance</span>"
     ]
@@ -54,7 +54,7 @@
     "href": "cleaning/index.html",
     "title": "5  A Data Cleaning Pipeline",
     "section": "",
-    "text": "Build a cleaning pipeline that profiles the raw event log, deduplicates records, normalizes status codes and endpoint names, fills missing values, and validates the result — emitting a clean dataset and a data-quality report. Cleaning is its own kind of analysis: quality assurance.\n\nCleaning is a pipeline of small, testable transformations.\nProfiling first (types, ranges, missingness) tells you what needs fixing.\nDeduplication needs a notion of “same record”.\nEvery change is documented so clean data can be traced to raw data.",
+    "text": "Build a cleaning pipeline that profiles the raw event log, deduplicates records, normalizes status codes and endpoint names, fills missing values, and validates the result, emitting a clean dataset and a data-quality report. Cleaning is its own kind of analysis: quality assurance.\n\nCleaning is a pipeline of small, testable transformations.\nProfiling first (types, ranges, missingness) tells you what needs fixing.\nDeduplication needs a notion of “same record”.\nEvery change is documented so clean data can be traced to raw data.",
     "crumbs": [
       "<span class='chapter-number'>5</span>  <span class='chapter-title'>A Data Cleaning Pipeline</span>"
     ]
@@ -64,7 +64,7 @@
     "href": "operational-gen/index.html",
     "title": "6  An Operational Metrics Generator",
     "section": "",
-    "text": "Build a generator that produces time-series metrics for the service — request rate, error rate, latency percentiles, CPU, and memory — with trend, seasonality, noise, and a few injected anomalies, so the forecasting and monitoring lessons have known targets to find.\n\nA time series is trend plus seasonality plus noise.\nBecause we choose the components, we know the true signal.\nInjected anomalies give the monitoring lesson known targets to recover.",
+    "text": "Build a generator that produces time-series metrics for the service (e.g., request rate, error rate, latency percentiles, CPU, and memory) with trend, seasonality, noise, and a few injected anomalies, so the forecasting and monitoring lessons have known targets to find.\n\nA time series is trend plus seasonality plus noise.\nBecause we choose the components, we know the true signal.\nInjected anomalies give the monitoring lesson known targets to recover.",
     "crumbs": [
       "<span class='chapter-number'>6</span>  <span class='chapter-title'>An Operational Metrics Generator</span>"
     ]
@@ -74,7 +74,7 @@
     "href": "retention/index.html",
     "title": "7  A Cohort and Retention Pipeline",
     "section": "",
-    "text": "Build a pipeline that groups users into cohorts by signup month and computes how many of each cohort return in each later month — the retention curve. A distinct kind of analysis: behavior over time, by group.\n\nA cohort shares a defining event; retention tracks its members over time.\nGrouping by cohort and period is a table joined to itself.\nRetention answers “do users come back?”, not just “how many signed up?”.\nCheck counts against hand-computed small examples.",
+    "text": "Build a pipeline that groups users into cohorts by signup month and computes how many of each cohort return in each later month (the retention curve). A distinct kind of analysis: behavior over time, by group.\n\nA cohort shares a defining event; retention tracks its members over time.\nGrouping by cohort and period is a table joined to itself.\nRetention answers “do users come back?”, not just “how many signed up?”.\nCheck counts against hand-computed small examples.",
     "crumbs": [
       "<span class='chapter-number'>7</span>  <span class='chapter-title'>A Cohort and Retention Pipeline</span>"
     ]
@@ -84,7 +84,7 @@
     "href": "funnel/index.html",
     "title": "8  A Funnel Pipeline",
     "section": "",
-    "text": "Build a pipeline that traces users through a sequence of stages — signup, activation, first deploy, paid plan — and reports the drop-off at each one. A distinct kind of analysis: funnel and conversion analysis.\n\nA funnel orders stages and measures conversion between them.\nEach stage is a filter; drop-off is the complement.\nFunnels reveal where a process loses users.\nStage order and definition change the answer — document them.",
+    "text": "Build a pipeline that traces users through a sequence of stages (signup, activation, first deploy, paid plan) and reports the drop-off at each one. A distinct kind of analysis: funnel and conversion analysis.\n\nA funnel orders stages and measures conversion between them.\nEach stage is a filter; drop-off is the complement.\nFunnels reveal where a process loses users.\nStage order and definition change the answer — document them.",
     "crumbs": [
       "<span class='chapter-number'>8</span>  <span class='chapter-title'>A Funnel Pipeline</span>"
     ]
@@ -114,7 +114,7 @@
     "href": "regression/index.html",
     "title": "11  A Linear Regression Pipeline",
     "section": "",
-    "text": "Build a least-squares regression pipeline: fit a line to predict a numeric outcome — request latency from load and payload size, or build time from code size — inspect the residuals, and evaluate the fit on held-out data. A distinct kind of analysis: predictive modeling with a continuous outcome.\n\nLeast squares minimizes the sum of squared residuals.\nCoefficients have concrete, checkable meanings.\nResiduals reveal what the model misses.\nA fitted line is a claim, not a fact — evaluate it on unseen data.",
+    "text": "Build a least-squares regression pipeline: fit a line to predict a numeric outcome such as request latency from load and payload size, or build time from code size, then inspect the residuals, and evaluate the fit on held-out data. A distinct kind of analysis: predictive modeling with a continuous outcome.\n\nLeast squares minimizes the sum of squared residuals.\nCoefficients have concrete, checkable meanings.\nResiduals reveal what the model misses.\nA fitted line is a claim, not a fact — evaluate it on unseen data.",
     "crumbs": [
       "<span class='chapter-number'>11</span>  <span class='chapter-title'>A Linear Regression Pipeline</span>"
     ]
@@ -124,7 +124,7 @@
     "href": "classification/index.html",
     "title": "12  A Classification Pipeline",
     "section": "",
-    "text": "Build a pipeline that predicts a category — will this request fail with a 5xx, or will this build fail? — from its features, and judge it with a confusion matrix and the right metric. A distinct kind of analysis: predictive modeling with a categorical outcome.\n\nClassification predicts a label, not a number.\nA confusion matrix shows the kinds of errors a classifier makes.\nAccuracy alone misleads when classes are imbalanced.\nThe right metric depends on the cost of each kind of error.",
+    "text": "Build a pipeline that predicts a category (e.g., will this request fail with a 5xx, or will this build fail?) from its features, and judge it with a confusion matrix and the right metric. A distinct kind of analysis: predictive modeling with a categorical outcome.\n\nClassification predicts a label, not a number.\nA confusion matrix shows the kinds of errors a classifier makes.\nAccuracy alone misleads when classes are imbalanced.\nThe right metric depends on the cost of each kind of error.",
     "crumbs": [
       "<span class='chapter-number'>12</span>  <span class='chapter-title'>A Classification Pipeline</span>"
     ]
@@ -134,7 +134,7 @@
     "href": "similarity/index.html",
     "title": "13  A Similarity Pipeline",
     "section": "",
-    "text": "Build a pipeline that finds the records most like a given one — similar error reports, similar services, or similar users — under some distance on chosen features. A distinct kind of analysis: nearest-neighbor and similarity analysis.\n\n“Similar” means close under some distance on chosen features.\nFeature choice and scaling decide what similarity means.\nNearest neighbors generalize from “equal” to “nearby”.\nSimilarity underpins recommendation and record linkage.",
+    "text": "Build a pipeline that finds the records most like a given one (i.e., similar error reports, similar services, or similar users) under some distance on chosen features. A distinct kind of analysis: nearest-neighbor and similarity analysis.\n\n“Similar” means close under some distance on chosen features.\nFeature choice and scaling decide what similarity means.\nNearest neighbors generalize from “equal” to “nearby”.\nSimilarity underpins recommendation and record linkage.",
     "crumbs": [
       "<span class='chapter-number'>13</span>  <span class='chapter-title'>A Similarity Pipeline</span>"
     ]
@@ -154,7 +154,7 @@
     "href": "db-pipe/index.html",
     "title": "15  A SQL Pipeline with DuckDB",
     "section": "",
-    "text": "Build the same analytical workflow over the event log and users in declarative SQL using DuckDB, and see how a columnar engine differs from dataframe code. A distinct kind of analysis: relational and declarative.\n\nSQL says what you want; the engine decides how to compute it.\nSELECT, WHERE, GROUP, and JOIN mirror the dataframe operations already used.\nDuckDB’s columnar engine is optimized for analytical queries.\nTwo mental models — dataframe and relational — solve the same problems.",
+    "text": "Build the same analytical workflow over the event log and users in declarative SQL using DuckDB, and see how a columnar engine differs from dataframe code. A distinct kind of analysis: relational and declarative.\n\nSQL says what you want; the engine decides how to compute it.\nSELECT, WHERE, GROUP, and JOIN mirror the dataframe operations already used.\nDuckDB’s columnar engine is optimized for analytical queries.\nTwo tools (dataframe and relational DB) solve the same problems.",
     "crumbs": [
       "<span class='chapter-number'>15</span>  <span class='chapter-title'>A SQL Pipeline with DuckDB</span>"
     ]
@@ -164,7 +164,7 @@
     "href": "etl/index.html",
     "title": "16  An ETL Pipeline from the Web",
     "section": "",
-    "text": "Build an ingestion pipeline that fetches a repository’s issues or commits (or a CI status feed) from a public API with httpx, transforms it, and loads it into DuckDB — handling pagination, rate limits, and caching. A distinct kind of analysis: extract, transform, load.\n\nETL is ingest → transform → load, and the ingest step is often the web.\nhttpx fetches; we add pagination, rate limits, and caching around it.\nCache responses so re-runs don’t re-fetch (or re-bill) the source.\nA mock server lets us test the pipeline offline.",
+    "text": "Build an ingestion pipeline that fetches a repository’s issues or commits (or a CI status feed) from a public API with httpx, transforms it, and loads it into DuckDB, handling pagination, rate limits, and caching. A distinct kind of analysis: extract, transform, load.\n\nETL is ingest → transform → load, and the ingest step is often the web.\nhttpx fetches; we add pagination, rate limits, and caching around it.\nCache responses so re-runs don’t re-fetch (or re-bill) the source.\nA mock server lets us test the pipeline offline.",
     "crumbs": [
       "<span class='chapter-number'>16</span>  <span class='chapter-title'>An ETL Pipeline from the Web</span>"
     ]
@@ -184,7 +184,7 @@
     "href": "clustering/index.html",
     "title": "18  A Clustering Pipeline",
     "section": "",
-    "text": "Build a pipeline that groups records into segments — services by traffic pattern, or users by behavior — with a simple k-means routine and interprets what each cluster means. A distinct kind of analysis: unsupervised segmentation.\n\nClustering groups records without predefined labels.\nk-means alternates assignment and centroid updates until stable.\nThe algorithm finds structure, not meaning — interpret the clusters.\nValidate by asking whether clusters are stable and useful.",
+    "text": "Build a pipeline that groups records into segments (services by traffic pattern, or users by behavior) with a simple k-means routine and interprets what each cluster means. A distinct kind of analysis: unsupervised segmentation.\n\nClustering groups records without predefined labels.\nk-means alternates assignment and centroid updates until stable.\nThe algorithm finds structure, not meaning: we have to interpret the clusters.\nValidate by asking whether clusters are stable and useful.",
     "crumbs": [
       "<span class='chapter-number'>18</span>  <span class='chapter-title'>A Clustering Pipeline</span>"
     ]
@@ -202,11 +202,11 @@
   {
     "objectID": "finale/index.html",
     "href": "finale/index.html",
-    "title": "Data Analysis Design by Example",
+    "title": "20  Conclusion",
     "section": "",
-    "text": "Conclusion\n\nRecap the through-line: each lesson built a small version of a real pipeline of a different kind, using mature tools rather than rebuilding them. The habits — verify, document, reproduce — matter more than any single technique, and are what to carry into whatever comes next.",
+    "text": "Recap the through-line: each lesson built a small version of a real pipeline of a different kind, using mature tools rather than rebuilding them. The practices (verify, document, reproduce) matter more than any single technique, and are what to carry into whatever comes next.",
     "crumbs": [
-      "<span class='chapter-number'>20</span>  <span class='chapter-title'>index.html</span>"
+      "<span class='chapter-number'>20</span>  <span class='chapter-title'>Conclusion</span>"
     ]
   },
   {

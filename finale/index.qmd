@@ -1,6 +1,6 @@
-#. Conclusion
+# Conclusion
 
 Recap the through-line: each lesson built a small version of a real pipeline of
-a different kind, using mature tools rather than rebuilding them. The habits —
-verify, document, reproduce — matter more than any single technique, and are
+a different kind, using mature tools rather than rebuilding them. The practices
+(verify, document, reproduce) matter more than any single technique, and are
 what to carry into whatever comes next.

@@ -1,7 +1,7 @@
 # A Funnel Pipeline
 
-Build a pipeline that traces users through a sequence of stages — signup,
-activation, first deploy, paid plan — and reports the drop-off at each one. A
+Build a pipeline that traces users through a sequence of stages (signup,
+activation, first deploy, paid plan) and reports the drop-off at each one. A
 distinct kind of analysis: funnel and conversion analysis.
 
 -   A funnel orders stages and measures conversion between them.

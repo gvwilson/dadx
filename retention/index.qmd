@@ -1,7 +1,7 @@
 # A Cohort and Retention Pipeline
 
 Build a pipeline that groups users into cohorts by signup month and computes
-how many of each cohort return in each later month — the retention curve. A
+how many of each cohort return in each later month (the retention curve). A
 distinct kind of analysis: behavior over time, by group.
 
 -   A cohort shares a defining event; retention tracks its members over time.

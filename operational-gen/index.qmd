@@ -1,7 +1,7 @@
 # An Operational Metrics Generator
 
-Build a generator that produces time-series metrics for the service — request
-rate, error rate, latency percentiles, CPU, and memory — with trend,
+Build a generator that produces time-series metrics for the service (e.g., request
+rate, error rate, latency percentiles, CPU, and memory) with trend,
 seasonality, noise, and a few injected anomalies, so the forecasting and
 monitoring lessons have known targets to find.
 

@@ -1,7 +1,7 @@
 # A Similarity Pipeline
 
-Build a pipeline that finds the records most like a given one — similar error
-reports, similar services, or similar users — under some distance on chosen
+Build a pipeline that finds the records most like a given one (i.e., similar error
+reports, similar services, or similar users) under some distance on chosen
 features. A distinct kind of analysis: nearest-neighbor and similarity analysis.
 
 -   "Similar" means close under some distance on chosen features.

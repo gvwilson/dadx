@@ -1,7 +1,7 @@
 # A Classification Pipeline
 
-Build a pipeline that predicts a category — will this request fail with a 5xx,
-or will this build fail? — from its features, and judge it with a confusion
+Build a pipeline that predicts a category (e.g., will this request fail with a 5xx,
+or will this build fail?) from its features, and judge it with a confusion
 matrix and the right metric. A distinct kind of analysis: predictive modeling
 with a categorical outcome.
 
