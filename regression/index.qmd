@@ -1,8 +1,8 @@
 # A Linear Regression Pipeline
 
 Build a least-squares regression pipeline: fit a line to predict a numeric
-outcome — response time from a disaster's severity and distance, or organism
-mass from pollution and length — then inspect the residuals, and evaluate the
+outcome (e.g., response time from a disaster's severity and distance, or organism
+mass from pollution and length) then inspect the residuals, and evaluate the
 fit on held-out data. A distinct kind of analysis: predictive modeling with a
 continuous outcome.
 

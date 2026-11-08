@@ -6,15 +6,14 @@ This lesson defines what a pipeline is (ingest, clean, explore, model,
 communicate) and introduces the course's two running examples, which share the
 same data shapes so that every lesson works against either:
 
--   **Disaster management** — a volunteer group coordinating response to
+-   Disaster management: a volunteer group coordinating response to
     storms, floods, and other local disasters (for software-oriented learners).
--   **Ecological data collection** — a field survey recording organisms and
+-   Ecological data collection: a field survey recording organisms and
     environmental conditions at study sites (for science-oriented learners).
-
 -   A data analysis pipeline is a chain of small, checkable steps.
 -   There are many kinds of analysis; this course samples them rather than
     drilling one.
 -   We use mature tools (Polars, DuckDB, Vega-Altair, httpx) instead of
-    rebuilding them.
+    building our own.
 -   Reproducibility means recording every step so an analysis can be re-run
     and audited.

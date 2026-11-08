@@ -1,10 +1,9 @@
 # A Time-Series Generator
 
-Build a generator that produces a time series for either running example —
-sensor readings such as river level, rainfall, and wind speed for the disaster
-example, or temperature and pollution at each site for the ecology example —
-with trend, seasonality, noise, and a few injected anomalies, so the
-forecasting and monitoring lessons have known targets to find.
+Build a generator that produces a time series for either running example (e.g.,
+sensor readings for the disaster example, or temperature and pollution at each
+site for the ecology example) with trend, seasonality, noise, and a few injected
+anomalies, so the forecasting and monitoring lessons have known targets to find.
 
 -   A time series is trend plus seasonality plus noise.
 -   Because we choose the components, we know the true signal.

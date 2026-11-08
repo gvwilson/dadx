@@ -1,7 +1,7 @@
 # A Similarity Pipeline
 
-Build a pipeline that finds the records most like a given one — similar
-incident reports, or similar sites and specimens — under some distance on
+Build a pipeline that finds the records most like a given one (e.g., similar
+incident reports, or similar sites and specimens) under some distance on
 chosen features. A distinct kind of analysis: nearest-neighbor and similarity
 analysis.
 

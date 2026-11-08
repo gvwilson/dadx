@@ -1,7 +1,7 @@
 # An A/B Test Pipeline
 
-Build a pipeline that compares two variants — two alerting strategies for
-disaster response, or two sampling protocols for the field survey — with a
+Build a pipeline that compares two variants (e.g., two alerting strategies for
+disaster response, or two sampling protocols for the field survey) with a
 permutation test and a bootstrap confidence interval for the effect size. A
 distinct kind of analysis: experimentation and inference.
 

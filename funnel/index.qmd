@@ -9,4 +9,4 @@ conversion analysis.
 -   A funnel orders stages and measures conversion between them.
 -   Each stage is a filter; drop-off is the complement.
 -   Funnels reveal where a process loses records.
--   Stage order and definition change the answer — document them.
+-   Stage order and definition change the answer: document them.

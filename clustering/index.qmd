@@ -1,7 +1,7 @@
 # A Clustering Pipeline
 
-Build a pipeline that groups records into segments — incidents by kind and
-severity, or sites by species composition — with a simple k-means routine and
+Build a pipeline that groups records into segments (e.g., incidents by kind and
+severity, or sites by species composition) with a simple k-means routine and
 interprets what each cluster means. A distinct kind of analysis: unsupervised
 segmentation.
 

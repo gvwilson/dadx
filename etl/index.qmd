@@ -1,10 +1,8 @@
 # An ETL Pipeline from the Web
 
-Build an ingestion pipeline that fetches data from a public API with httpx —
-storm or weather data for the disaster example, or observations from a service
-such as iNaturalist or GBIF for the ecology example — transforms it, and loads
-it into DuckDB, handling pagination, rate limits, and caching. A distinct kind
-of analysis: extract, transform, load.
+Build an ingestion pipeline that fetches data from a public API with httpx,
+transforms it, and loads it into DuckDB, handling pagination, rate limits, and
+caching. A distinct kind of analysis: extract, transform, load.
 
 -   ETL is ingest → transform → load, and the ingest step is often the web.
 -   httpx fetches; we add pagination, rate limits, and caching around it.

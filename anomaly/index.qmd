@@ -1,7 +1,7 @@
 # An Anomaly and Monitoring Pipeline
 
-Build a pipeline that flags unusual values and detects drift in a time series —
-a flood spike in a river gauge, or a pollution spike at a study site — using
+Build a pipeline that flags unusual values and detects drift in a time series
+(e.g., a flood spike in a river gauge, or a pollution spike at a study site) using
 z-scores and simple control rules. A distinct kind of analysis: monitoring and
 anomaly detection.
 
