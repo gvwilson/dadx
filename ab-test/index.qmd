@@ -11,46 +11,25 @@ distinct kind of analysis: experimentation and inference.
 -   We will simulate response times so the true answer is known, then test whether the pipeline recovers it.
 -   A fixed seed makes the random data reproducible.
 
-```python
-import random
-import statistics
-
-import polars as pl
-
-random.seed(20241108)
+```{.python include="ab-test.py" snippet="setup"}
 ```
 
 -   Each group has 200 responders, with response times drawn from a bell curve.
 -   Variant A has a mean of 120 seconds; variant B is a bit faster at 110 seconds.
 -   The two curves share a spread of 25 seconds, so the difference is real but not huge.
 
-```python
-n = 200
-mean_a, mean_b = 120.0, 110.0
-sd = 25.0
-
-times_a = [random.gauss(mean_a, sd) for _ in range(n)]
-times_b = [random.gauss(mean_b, sd) for _ in range(n)]
-
-print(f"A: {statistics.mean(times_a):.1f}s  B: {statistics.mean(times_b):.1f}s")
+```{.python include="ab-test.py" snippet="generate"}
 ```
 
 -   Put both groups into one Polars dataframe, with a column recording which variant each row came from.
 
-```python
-rows = [("A", t) for t in times_a] + [("B", t) for t in times_b]
-df = pl.DataFrame(rows, schema=["variant", "response_time"], orient="row")
-
-print(df.group_by("variant").len())
-print(df.head(5))
+```{.python include="ab-test.py" snippet="dataframe"}
 ```
 
 -   The observed effect is the difference in means, A minus B.
 -   It is just a number; the rest of the lesson asks whether it is real or could be noise.
 
-```python
-observed = statistics.mean(times_a) - statistics.mean(times_b)
-print(f"observed A - B = {observed:.1f}s")
+```{.python include="ab-test.py" snippet="observed_difference"}
 ```
 
 -   The null hypothesis says there is no real difference: both groups come from the same distribution.
@@ -58,20 +37,7 @@ print(f"observed A - B = {observed:.1f}s")
 -   A permutation test simulates the null by shuffling the variant labels many times.
 -   Each shuffle recomputes the difference; if the labels do not matter, shuffled differences look like the real one.
 
-```python
-all_times = times_a + times_b
-num_shuffles = 10_000
-extreme = 0
-
-for _ in range(num_shuffles):
-    random.shuffle(all_times)
-    left = statistics.mean(all_times[:n])
-    right = statistics.mean(all_times[n:])
-    if abs(left - right) >= abs(observed):
-        extreme += 1
-
-p_value = extreme / num_shuffles
-print(f"permutation p-value = {p_value:.4f}")
+```{.python include="ab-test.py" snippet="permutation_test"}
 ```
 
 -   The p-value is how often shuffles look at least as extreme as the real data.
@@ -83,19 +49,7 @@ print(f"permutation p-value = {p_value:.4f}")
 -   The bootstrap estimates the effect size with a confidence interval.
 -   Resample each group with replacement, recompute the difference, and repeat to build a distribution of plausible effects.
 
-```python
-num_boot = 10_000
-boot_diffs = []
-
-for _ in range(num_boot):
-    ra = [random.choice(times_a) for _ in range(n)]
-    rb = [random.choice(times_b) for _ in range(n)]
-    boot_diffs.append(statistics.mean(ra) - statistics.mean(rb))
-
-boot_diffs.sort()
-lower = boot_diffs[int(0.025 * num_boot)]
-upper = boot_diffs[int(0.975 * num_boot)]
-print(f"bootstrap 95% CI for A - B = [{lower:.1f}, {upper:.1f}]s")
+```{.python include="ab-test.py" snippet="bootstrap"}
 ```
 
 -   The middle 95% of bootstrap differences is the confidence interval.

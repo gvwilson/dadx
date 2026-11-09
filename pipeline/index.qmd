@@ -19,35 +19,7 @@ Vega-Altair for charts.
 -   Generate the sample inline so the lesson is self-contained; a real pipeline
     would read this from a file or an API instead.
 
-```python
-import random
-from datetime import datetime, timedelta
-
-random.seed(20261108)
-
-KINDS = ["storm", "flood", "power-outage", "fire"]
-STATUSES = ["reported", "triaged", "dispatched", "resolved"]
-BASE = datetime(2024, 6, 1, 0, 0, 0)
-
-def make_incidents(n, n_responders=20):
-    rows = []
-    for i in range(1, n + 1):
-        when = BASE + timedelta(
-            days=random.randint(0, 60),
-            hours=random.randint(0, 23),
-            minutes=random.randint(0, 59),
-        )
-        rows.append({
-            "id": i,
-            "timestamp": when.isoformat(),
-            "latitude": round(random.uniform(-40.0, -30.0), 4),
-            "longitude": round(random.uniform(140.0, 150.0), 4),
-            "kind": random.choice(KINDS),
-            "severity": random.randint(1, 5),
-            "status": random.choice(STATUSES),
-            "responder_id": random.randint(1, n_responders),
-        })
-    return rows
+```{.python include="pipeline.py" snippet="make_sample"}
 ```
 
 -   The coordinate ranges pin the incidents to south-eastern Australia, the same
@@ -62,12 +34,7 @@ def make_incidents(n, n_responders=20):
 -   `head` shows the first rows; the schema it prints is the contract the rest
     of the pipeline relies on.
 
-```python
-import polars as pl
-
-pl.DataFrame(make_incidents(120)).write_csv("incidents.csv")
-raw = pl.read_csv("incidents.csv")
-raw.head()
+```{.python include="pipeline.py" snippet="ingest"}
 ```
 
 ## Clean
@@ -77,16 +44,10 @@ raw.head()
 -   The one real clean-up is parsing `timestamp` from a string into a datetime,
     so ordering and date arithmetic work later.
 
-```python
-raw.schema
-raw.null_count()
+```{.python include="pipeline.py" snippet="clean_profile"}
 ```
 
-```python
-cleaned = raw.with_columns(
-    pl.col("timestamp").str.to_datetime(format="%Y-%m-%dT%H:%M:%S")
-)
-cleaned.schema
+```{.python include="pipeline.py" snippet="clean_parse"}
 ```
 
 ## Explore
@@ -94,14 +55,10 @@ cleaned.schema
 -   `select` picks columns; `filter` picks rows. Both return a new frame and
     leave the original untouched.
 
-```python
-cols = cleaned.select(["id", "kind", "severity", "status"])
-cols.head()
+```{.python include="pipeline.py" snippet="explore_select"}
 ```
 
-```python
-high = cleaned.filter(pl.col("severity") >= 4)
-high.shape
+```{.python include="pipeline.py" snippet="explore_filter"}
 ```
 
 -   `high.shape` is the number of rows and columns: the filter keeps only the
@@ -112,16 +69,12 @@ high.shape
 -   `group_by` plus an aggregation collapses many rows into one row per group.
 -   Count per kind is the headline number: which incident type is most common?
 
-```python
-by_kind = cleaned.group_by("kind").len().sort("len", descending=True)
-by_kind
+```{.python include="pipeline.py" snippet="summarize_kind"}
 ```
 
 -   The severity distribution is the same operation on a different column.
 
-```python
-by_severity = cleaned.group_by("severity").len().sort("severity")
-by_severity
+```{.python include="pipeline.py" snippet="summarize_severity"}
 ```
 
 ## Reshape
@@ -130,13 +83,7 @@ by_severity
     into a wide one. Here the severity counts become a matrix with one row per
     kind.
 
-```python
-matrix = (
-    cleaned.group_by("kind", "severity")
-    .len()
-    .pivot(on="severity", index="kind", values="len", sort_columns=True)
-)
-matrix
+```{.python include="pipeline.py" snippet="reshape"}
 ```
 
 -   A `null` cell means no incident of that kind had that severity; the row and
@@ -150,19 +97,7 @@ matrix
     quantitative (`Q`) so bar height is a measured value. `sort="-y"` orders the
     bars tallest first.
 
-```python
-import altair as alt
-
-chart = (
-    alt.Chart(by_kind)
-    .mark_bar()
-    .encode(
-        x=alt.X("kind:N", sort="-y", title="kind"),
-        y=alt.Y("len:Q", title="incidents"),
-    )
-    .properties(title="Incidents per kind")
-)
-chart
+```{.python include="pipeline.py" snippet="plot"}
 ```
 
 ## Check the answer
@@ -171,9 +106,7 @@ chart
     synthetic data gives us ground truth: the counts must sum to the number of
     rows, and every kind must appear.
 
-```python
-assert by_kind["len"].sum() == cleaned.height
-assert set(by_kind["kind"]) == set(KINDS)
+```{.python include="pipeline.py" snippet="check"}
 ```
 
 -   The ecology twin runs the same stages with `observations` grouped by

@@ -14,15 +14,7 @@ and anomaly detection.
     library; `polars` and `altair` do the heavy lifting. We fix the seed so the
     synthetic series, spike, and flags are identical on every run.
 
-```python
-import random
-import statistics
-from datetime import datetime, timedelta
-
-import altair as alt
-import polars as pl
-
-random.seed(7)
+```{.python include="anomaly.py" snippet="import"}
 ```
 
 -   A river gauge is a time series: one number per timestamp. We synthesize a
@@ -30,24 +22,7 @@ random.seed(7)
     brief flood spike. Real data would arrive from an ingest step; here we make
     it ourselves so the lesson is self-contained.
 
-```python
-N = 200                  # hourly readings, a bit over a week
-BASELINE = 2.0           # meters: the gauge's usual level
-NOISE = 0.1              # meters: hour-to-hour jitter
-start = datetime(2024, 6, 1, 0, 0, 0)
-
-levels = []
-for i in range(N):
-    level = BASELINE + random.gauss(0.0, NOISE)
-    if 100 <= i <= 103:  # a short flood spike
-        level += 4.0
-    levels.append(round(level, 3))
-
-df = pl.DataFrame({
-    "timestamp": [start + timedelta(hours=i) for i in range(N)],
-    "level": levels,
-})
-df.head()
+```{.python include="anomaly.py" snippet="generate"}
 ```
 
 -   An anomaly is an observation far from what a model expects. Our first model
@@ -55,37 +30,21 @@ df.head()
     z-score measures distance from that mean in units of standard deviation:
     zero is average, 3 is three standard deviations out.
 
-```python
-mean = statistics.fmean(df["level"])
-sd = statistics.stdev(df["level"])
-mean, sd
+```{.python include="anomaly.py" snippet="z_scores"}
 ```
 
 -   Flag any point whose z-score is outside three standard deviations. Taking
     the absolute value catches both a spike and a sudden drop, since either is
     unusual.
 
-```python
-THRESHOLD = 3.0
-
-df = df.with_columns(
-    ((pl.col("level") - mean) / sd).alias("z"),
-)
-df = df.with_columns(
-    (pl.col("z").abs() > THRESHOLD).alias("flag"),
-)
-df.filter(pl.col("flag"))
+```{.python include="anomaly.py" snippet="flag"}
 ```
 
 -   Only the four spike points clear the threshold; the noise is well inside it.
     We flag rather than drop: an anomaly is a signal to inspect, not an error to
     remove.
 
-```python
-base = alt.Chart(df).encode(x="timestamp:T")
-line = base.mark_line().encode(y="level:Q")
-marks = base.mark_point(color="red", size=70).encode(y="level:Q").transform_filter("datum.flag")
-(line + marks).properties(width=600, height=200)
+```{.python include="anomaly.py" snippet="plot"}
 ```
 
 -   The plot puts a red dot on each flagged reading, exactly on the spike. But
@@ -93,20 +52,7 @@ marks = base.mark_point(color="red", size=70).encode(y="level:Q").transform_filt
     slowly rises, "expected" has moved and every new reading starts to look
     unusual. That movement is drift, and rolling statistics track it.
 
-```python
-WINDOW = 12  # hours: a moving baseline
-
-df = df.with_columns(
-    pl.col("level").rolling_mean(window_size=WINDOW).alias("roll_mean"),
-    pl.col("level").rolling_std(window_size=WINDOW).alias("roll_std"),
-)
-df = df.with_columns(
-    ((pl.col("level") - pl.col("roll_mean")) / pl.col("roll_std")).alias("roll_z"),
-)
-df = df.with_columns(
-    (pl.col("roll_z").abs() > THRESHOLD).alias("roll_flag"),
-)
-df.filter(pl.col("roll_flag"))
+```{.python include="anomaly.py" snippet="rolling"}
 ```
 
 -   The rolling version flags only the leading edge of the spike. A window that

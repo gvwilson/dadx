@@ -40,6 +40,7 @@ csl: mccole/book.csl
 
 filters:
   - mccole/links.lua
+  - include-code-files
 
 shortcodes:
   - mccole/glossary.lua

@@ -20,15 +20,7 @@ that records each step's inputs and outputs.
 -   Writing those vocabularies as constants means the dictionary and the
     validation code share one source of truth.
 
-```python
-import json
-from datetime import datetime, timezone
-
-import polars as pl
-
-KINDS = ["storm", "flood", "power-outage", "fire"]
-STATUSES = ["reported", "triaged", "dispatched", "resolved"]
-SEVERITIES = ["low", "medium", "high"]
+```{.python include="management.py" snippet="imports"}
 ```
 
 -   Store the dictionary as a list of dicts first; a list is easy to read and
@@ -37,25 +29,7 @@ SEVERITIES = ["low", "medium", "high"]
     stores a description of its range; `None` means the field is not
     constrained.
 
-```python
-dictionary = [
-    {"name": "id", "type": "integer", "units": None,
-     "meaning": "unique identifier for an incident", "allowed": None},
-    {"name": "timestamp", "type": "datetime", "units": None,
-     "meaning": "when the incident was reported", "allowed": None},
-    {"name": "latitude", "type": "float", "units": "decimal degrees",
-     "meaning": "north-south position", "allowed": "between -40.0 and -30.0"},
-    {"name": "longitude", "type": "float", "units": "decimal degrees",
-     "meaning": "east-west position", "allowed": "between 140.0 and 150.0"},
-    {"name": "kind", "type": "string", "units": None,
-     "meaning": "the type of incident", "allowed": KINDS},
-    {"name": "severity", "type": "string", "units": None,
-     "meaning": "how serious the incident is", "allowed": SEVERITIES},
-    {"name": "status", "type": "string", "units": None,
-     "meaning": "where the incident sits in the response workflow", "allowed": STATUSES},
-    {"name": "responder_id", "type": "integer", "units": None,
-     "meaning": "id of the responder assigned", "allowed": "id present in responders"},
-]
+```{.python include="management.py" snippet="dictionary"}
 ```
 
 -   Turn the list into a dataframe so the dictionary renders as a table and can
@@ -64,23 +38,16 @@ dictionary = [
 -   Lists do not display well in a cell, so join them into a comma-separated
     string for display and keep the original list for validation.
 
-```python
-def describe(allowed):
-    return ", ".join(allowed) if isinstance(allowed, list) else allowed
-
-dd = pl.DataFrame([{**row, "allowed": describe(row["allowed"])} for row in dictionary])
-dd
+```{.python include="management.py" snippet="describe"}
 ```
 
 -   Because the dictionary is a table, ordinary dataframe queries answer
     questions about the data without touching the data itself.
 
-```python
-dd.filter(pl.col("units").is_not_null()).select("name", "units")
+```{.python include="management.py" snippet="query_dictionary"}
 ```
 
-```python
-[row["name"] for row in dictionary if isinstance(row["allowed"], list)]
+```{.python include="management.py" snippet="categorical_fields"}
 ```
 
 ## The dictionary is a contract
@@ -91,39 +58,17 @@ dd.filter(pl.col("units").is_not_null()).select("name", "units")
 -   Validation turns the contract from a promise into a check: walk the
     categorical fields and flag any value outside the controlled vocabulary.
 
-```python
-def check_allowed(frame, dictionary):
-    problems = []
-    for row in dictionary:
-        if not isinstance(row["allowed"], list):
-            continue
-        name = row["name"]
-        for value in frame[name].to_list():
-            if value not in row["allowed"]:
-                problems.append((name, value))
-    return problems
+```{.python include="management.py" snippet="validate"}
 ```
 
 -   A few hand-written rows stand in for the producer's output. Two values
     break the contract on purpose: `"Flood"` is capitalized and `"critical"`
     is not a severity in the dictionary.
 
-```python
-incidents = pl.DataFrame([
-    {"id": 1, "timestamp": "2024-06-01T08:12:00", "latitude": -33.86,
-     "longitude": 151.21, "kind": "storm", "severity": "high",
-     "status": "reported", "responder_id": 3},
-    {"id": 2, "timestamp": "2024-06-01T08:30:00", "latitude": -33.87,
-     "longitude": 151.20, "kind": "Flood", "severity": "medium",
-     "status": "triaged", "responder_id": 3},
-    {"id": 3, "timestamp": "2024-06-01T09:05:00", "latitude": -34.00,
-     "longitude": 150.90, "kind": "fire", "severity": "critical",
-     "status": "dispatched", "responder_id": 7},
-])
+```{.python include="management.py" snippet="incidents"}
 ```
 
-```python
-check_allowed(incidents, dictionary)
+```{.python include="management.py" snippet="check_contract"}
 ```
 
 -   The two violations are the contract doing its job: without the dictionary,
@@ -138,52 +83,28 @@ check_allowed(incidents, dictionary)
     each naming the step, its inputs, its outputs, and when it ran.
 -   Appending one small dict per step keeps the log simple and machine-readable.
 
-```python
-provenance = []
-
-def log_step(name, inputs, outputs):
-    entry = {
-        "step": name,
-        "inputs": inputs,
-        "outputs": outputs,
-        "time": datetime.now(timezone.utc).isoformat(),
-    }
-    provenance.append(entry)
-    return entry
+```{.python include="management.py" snippet="provenance_log"}
 ```
 
 -   Run a small pipeline over the incidents and log each step. The log is the
     audit trail that links the final summary back to the raw rows.
 
-```python
-log_step("load", [], ["incidents"])
-
-cleaned = incidents.with_columns(pl.col("kind").str.to_lowercase())
-log_step("normalize", ["incidents"], ["cleaned"])
-
-counts = cleaned.group_by("kind").len()
-log_step("summarize", ["cleaned"], ["counts_by_kind"])
+```{.python include="management.py" snippet="run_pipeline"}
 ```
 
 -   Write the log as JSON lines: one JSON object per line, easy to append and
     easy to read back with any tool.
 
-```python
-with open("provenance.jsonl", "w") as f:
-    for entry in provenance:
-        f.write(json.dumps(entry) + "\n")
+```{.python include="management.py" snippet="write_log"}
 ```
 
 -   Reading the log back as a dataframe closes the loop: the metadata layer is
     itself queryable data, so you can ask "what were the inputs to the summary?"
 
-```python
-log = pl.read_ndjson("provenance.jsonl")
-log
+```{.python include="management.py" snippet="read_back"}
 ```
 
-```python
-log.filter(pl.col("step") == "summarize").select("inputs", "outputs")
+```{.python include="management.py" snippet="query_log"}
 ```
 
 -   Without this log, a summary is a rumor: you cannot say how it was made or
@@ -197,16 +118,5 @@ log.filter(pl.col("step") == "summarize").select("inputs", "outputs")
 -   Units matter more here: `mass_g` is grams, `length_mm` is millimeters, and
     `count` is a number of individuals.
 
-```python
-observations_dict = [
-    {"name": "species", "type": "string", "units": None,
-     "meaning": "species identifier", "allowed": "controlled taxonomy"},
-    {"name": "count", "type": "integer", "units": "individuals",
-     "meaning": "number observed at the site", "allowed": "non-negative"},
-    {"name": "mass_g", "type": "float", "units": "grams",
-     "meaning": "mass of the sample", "allowed": "positive"},
-    {"name": "length_mm", "type": "float", "units": "millimeters",
-     "meaning": "length of the sample", "allowed": "positive"},
-]
-pl.DataFrame([{**row, "allowed": describe(row["allowed"])} for row in observations_dict])
+```{.python include="management.py" snippet="ecology_twin"}
 ```
