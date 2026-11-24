@@ -1,4 +1,4 @@
-# Overview {.unnumbered}
+# {.unnumbered}
 
 The best way to learn design in any field is to study examples.
 These lessons therefore build small versions of real data analysis pipelines
