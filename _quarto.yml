@@ -4,7 +4,6 @@ metadata-files:
 book:
   title: "Data Analysis Design by Example"
   repo-url: "https://github.com/gvwilson/dadx"
-  repo-actions: [edit, source, issue]
   chapters:
     - index.qmd
     - intro/index.qmd
