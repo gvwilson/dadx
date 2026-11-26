@@ -14,58 +14,49 @@ drop repeated observations).
 We fix the random seed so the dirt we inject below is the same every run, which
 makes the pipeline reproducible and testable.
 
-```{.python include="cleaning.py" snippet="setup"}
-```
+{{< inc cleaning/cleaning.py mark=setup >}}
 
 Generate forty plausible records. Real data arrives this way from an ingest
 step; here we synthesize it so the lesson is self-contained.
 
-```{.python include="cleaning.py" snippet="generate"}
-```
+{{< inc cleaning/cleaning.py mark=generate >}}
 
 Inject dirtiness, as if several sources wrote to one shared log. Each line is a
 separate defect, and each defect gets a distinct fix later.
 
-```{.python include="cleaning.py" snippet="inject_dirt"}
-```
+{{< inc cleaning/cleaning.py mark=inject_dirt >}}
 
 Profile before fixing. Types, shape, missingness, ranges, and label counts tell
 us what is broken and how much of it there is.
 
-```{.python include="cleaning.py" snippet="profile"}
-```
+{{< inc cleaning/cleaning.py mark=profile >}}
 
 Deduplicate next. "Same record" is a decision, not a property of the data: if
 the same event can be logged twice under a new id, identity is the event's
 content, not its id. We key on kind, place, and time.
 
-```{.python include="cleaning.py" snippet="dedup"}
-```
+{{< inc cleaning/cleaning.py mark=dedup >}}
 
 Normalize the labels: lowercase everything, then map synonyms to one controlled
 value. A tiny helper makes the rule reusable and testable on its own.
 
-```{.python include="cleaning.py" snippet="normalize"}
-```
+{{< inc cleaning/cleaning.py mark=normalize >}}
 
 Fill missing severity with an explicit policy: a missing severity means "not
 recorded", so we mark it unknown rather than inventing a value or dropping the
 row.
 
-```{.python include="cleaning.py" snippet="fill_missing"}
-```
+{{< inc cleaning/cleaning.py mark=fill_missing >}}
 
 Validate the result against the rules we care about. Location is essential, so
 rows that cannot be placed (null or outside the study bounds) are dropped, and
 every categorical value must be in its controlled set.
 
-```{.python include="cleaning.py" snippet="validate"}
-```
+{{< inc cleaning/cleaning.py mark=validate >}}
 
 Emit the two outputs: the clean table and a quality report. The report is the
 audit trail: each count records what a stage changed, so clean data can be
 traced back to raw data. In a full pipeline you would write `clean` to Parquet
 and the report to JSON for the next stage to read.
 
-```{.python include="cleaning.py" snippet="report"}
-```
+{{< inc cleaning/cleaning.py mark=report >}}

@@ -1,13 +1,13 @@
-# start snippet setup
+# mccole:setup
 import random
 
 import altair as alt
 import polars as pl
 
 stages = ["reported", "triaged", "dispatched", "resolved"]
-# end snippet setup
+# mccole:/setup
 
-# start snippet generate
+# mccole:generate
 random.seed(42)
 n_incidents = 1000
 
@@ -24,9 +24,9 @@ for _ in range(n_incidents):
 
 incidents = pl.DataFrame({"id": range(1, n_incidents + 1), "status": statuses})
 print(incidents.head())
-# end snippet generate
+# mccole:/generate
 
-# start snippet counts
+# mccole:counts
 stage_position = {name: i for i, name in enumerate(stages)}
 
 funnel = (
@@ -42,17 +42,17 @@ funnel = (
     .select("status", "reached")
 )
 print(funnel)
-# end snippet counts
+# mccole:/counts
 
-# start snippet conversion
+# mccole:conversion
 funnel = funnel.with_columns(
     (pl.col("reached").shift(-1) / pl.col("reached")).alias("conversion"),
     (1 - pl.col("reached").shift(-1) / pl.col("reached")).alias("drop_off"),
 )
 print(funnel)
-# end snippet conversion
+# mccole:/conversion
 
-# start snippet plot
+# mccole:plot
 bars = (
     alt.Chart(funnel)
     .mark_bar()
@@ -73,4 +73,4 @@ labels = (
 )
 
 (bars + labels).properties(title="Incident funnel").save("funnel.json")
-# end snippet plot
+# mccole:/plot

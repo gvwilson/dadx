@@ -19,8 +19,7 @@ recent past. A distinct kind of analysis: prediction over time.
     series, and the same code runs with the column renamed.
 -   Pin the seed first so the series is reproducible.
 
-```{.python include="forecasting.py" snippet="setup"}
-```
+{{< inc forecasting/forecasting.py mark=setup >}}
 
 -   A monthly reading over six years gives 72 points.
 -   The level is a base height plus a trend that rises a little each month, a
@@ -28,8 +27,7 @@ recent past. A distinct kind of analysis: prediction over time.
 -   The sine wave is the season: winter highs and summer lows, or any repeating
     yearly pattern.
 
-```{.python include="forecasting.py" snippet="generate"}
-```
+{{< inc forecasting/forecasting.py mark=generate >}}
 
 -   `t` is the month index; the level is everything else.
 
@@ -41,8 +39,7 @@ recent past. A distinct kind of analysis: prediction over time.
     model never sees them while it is being fit.
 -   We hold out the final year.
 
-```{.python include="forecasting.py" snippet="split"}
-```
+{{< inc forecasting/forecasting.py mark=split >}}
 
 ## A naive baseline
 
@@ -50,8 +47,7 @@ recent past. A distinct kind of analysis: prediction over time.
 -   It is nearly always wrong, but it gives a floor: a real model should beat
     it, or the model is not earning its keep.
 
-```{.python include="forecasting.py" snippet="baseline"}
-```
+{{< inc forecasting/forecasting.py mark=baseline >}}
 
 ## A trend and seasonal model
 
@@ -60,8 +56,7 @@ recent past. A distinct kind of analysis: prediction over time.
 -   The slope is the average change per month, estimated by least squares; the
     intercept is where that line starts.
 
-```{.python include="forecasting.py" snippet="trend"}
-```
+{{< inc forecasting/forecasting.py mark=trend >}}
 
 -   After removing the trend, what is left is the seasonal shape plus noise.
 -   Average the detrended leftovers by month: month 0 gets the mean of every
@@ -70,14 +65,12 @@ recent past. A distinct kind of analysis: prediction over time.
 -   The spread of the residuals around the fitted pattern, `sigma`, is our
     first estimate of the typical error.
 
-```{.python include="forecasting.py" snippet="seasonal"}
-```
+{{< inc forecasting/forecasting.py mark=seasonal >}}
 
 -   Forecasting is just extending the line: for each month ahead, add the trend
     times that month plus that month's seasonal term.
 
-```{.python include="forecasting.py" snippet="forecast"}
-```
+{{< inc forecasting/forecasting.py mark=forecast >}}
 
 ## Measure the error
 
@@ -85,8 +78,7 @@ recent past. A distinct kind of analysis: prediction over time.
     truth, in the units of the series.
 -   We compute it on the held-out points, which the fit never saw.
 
-```{.python include="forecasting.py" snippet="evaluate"}
-```
+{{< inc forecasting/forecasting.py mark=evaluate >}}
 
 -   The trend and seasonal model should beat the naive baseline, because it
     captures the yearly rise and fall that the naive forecast ignores.
@@ -99,8 +91,7 @@ recent past. A distinct kind of analysis: prediction over time.
     axes.
 -   The closer a forecast line sits to the actual line, the smaller its error.
 
-```{.python include="forecasting.py" snippet="plot"}
-```
+{{< inc forecasting/forecasting.py mark=plot >}}
 
 -   The naive line is flat, so it misses the seasonal curve entirely.
 -   The trend+seasonal line bends with the season, so it tracks the actual
@@ -114,8 +105,7 @@ recent past. A distinct kind of analysis: prediction over time.
 -   A rough interval is the forecast plus or minus two sigma: about 95% of
     values should land inside if the errors are normal and independent.
 
-```{.python include="forecasting.py" snippet="uncertainty"}
-```
+{{< inc forecasting/forecasting.py mark=uncertainty >}}
 
 -   The interval widens as we forecast further ahead, because each step adds
     new uncertainty.

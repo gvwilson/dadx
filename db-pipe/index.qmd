@@ -14,18 +14,15 @@ ask them is different.
 -   We reuse the disaster example: a small `responders` table and a larger `incidents` table.
 -   Pin the random seed so every run produces the same rows.
 
-```{.python include="db-pipe.py" snippet="setup"}
-```
+{{< inc db-pipe/db-pipe.py mark=setup >}}
 
 -   `responders` has one row per person: an id, a name, a join date, and a role.
 
-```{.python include="db-pipe.py" snippet="responders"}
-```
+{{< inc db-pipe/db-pipe.py mark=responders >}}
 
 -   `incidents` has one row per report, with `responder_id` pointing back at a person.
 
-```{.python include="db-pipe.py" snippet="incidents"}
-```
+{{< inc db-pipe/db-pipe.py mark=incidents >}}
 
 ## Load into DuckDB
 
@@ -34,8 +31,7 @@ ask them is different.
 -   We create the tables with SQL DDL, then insert the Polars rows in one batch.
 -   (`con.register` can attach a Polars or pandas frame directly, but that path needs PyArrow; DDL keeps this lesson dependency-free.)
 
-```{.python include="db-pipe.py" snippet="load"}
-```
+{{< inc db-pipe/db-pipe.py mark=load >}}
 
 -   `executemany` binds each `?` placeholder to a value and inserts the whole batch in one call.
 -   The ISO timestamp strings are cast to real `TIMESTAMP` and `DATE` values by the engine.
@@ -45,19 +41,15 @@ ask them is different.
 -   `SELECT` picks columns; `WHERE` picks rows. Together they are Polars' `select` and `filter`.
 -   SQL names the columns you want; the engine decides how to fetch them.
 
-```{.python include="db-pipe.py" snippet="select_sql"}
-```
+{{< inc db-pipe/db-pipe.py mark=select_sql >}}
 
-```{.python include="db-pipe.py" snippet="select_polars"}
-```
+{{< inc db-pipe/db-pipe.py mark=select_polars >}}
 
 -   Filtering is a `WHERE` clause, and ordering is `ORDER BY`.
 
-```{.python include="db-pipe.py" snippet="where_sql"}
-```
+{{< inc db-pipe/db-pipe.py mark=where_sql >}}
 
-```{.python include="db-pipe.py" snippet="where_polars"}
-```
+{{< inc db-pipe/db-pipe.py mark=where_polars >}}
 
 -   Note the difference in mood: SQL states the condition as one declarative sentence; Polars spells out each step in order.
 
@@ -65,11 +57,9 @@ ask them is different.
 
 -   Aggregation is `GROUP BY`: split rows into buckets, then compute one number per bucket.
 
-```{.python include="db-pipe.py" snippet="group_by_sql"}
-```
+{{< inc db-pipe/db-pipe.py mark=group_by_sql >}}
 
-```{.python include="db-pipe.py" snippet="group_by_polars"}
-```
+{{< inc db-pipe/db-pipe.py mark=group_by_polars >}}
 
 -   `COUNT(*)` is `pl.len()`, and the alias `AS n` is `.alias("n")`.
 -   Both engines push the counting into optimized C code rather than a Python loop.
@@ -79,11 +69,9 @@ ask them is different.
 -   A `JOIN` matches rows in two tables on a shared column, exactly like Polars' `join`.
 -   Here we attach each responder's name to the incidents they handled.
 
-```{.python include="db-pipe.py" snippet="join_sql"}
-```
+{{< inc db-pipe/db-pipe.py mark=join_sql >}}
 
-```{.python include="db-pipe.py" snippet="join_polars"}
-```
+{{< inc db-pipe/db-pipe.py mark=join_polars >}}
 
 -   `AS` gives a table a short alias so column references read clearly.
 -   `left_on` and `right_on` are the Polars mirror of SQL's `ON i.responder_id = r.id`.
@@ -93,11 +81,9 @@ ask them is different.
 
 -   Real questions combine operations: count incidents per status and show the average severity.
 
-```{.python include="db-pipe.py" snippet="aggregate_sql"}
-```
+{{< inc db-pipe/db-pipe.py mark=aggregate_sql >}}
 
-```{.python include="db-pipe.py" snippet="aggregate_polars"}
-```
+{{< inc db-pipe/db-pipe.py mark=aggregate_polars >}}
 
 -   Same shape, same answer: SQL reads as one sentence, Polars as a chain of verbs.
 

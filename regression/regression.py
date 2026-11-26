@@ -1,4 +1,4 @@
-# start snippet generate
+# mccole:generate
 import math
 import random
 
@@ -28,10 +28,10 @@ data = pl.DataFrame({
     "response_min": response_times,
 })
 print(data.head())
-# end snippet generate
+# mccole:/generate
 
 
-# start snippet normal_equations
+# mccole:normal_equations
 def solve_linear(a, b):
     """Solve a x = b by Gaussian elimination with partial pivoting."""
     n = len(b)
@@ -77,29 +77,29 @@ def fit_least_squares(X, y):
 def predict(X, w):
     """Return the fitted value for each row: its dot product with w."""
     return [sum(row[j] * w[j] for j in range(len(w))) for row in X]
-# end snippet normal_equations
+# mccole:/normal_equations
 
 
-# start snippet fit
+# mccole:fit
 X = [[1.0, float(s), d] for s, d in zip(severities, distances)]
 y = list(response_times)
 
 w = fit_least_squares(X, y)
 print("coefficients (intercept, severity, distance):")
 print(w)
-# end snippet fit
+# mccole:/fit
 
 
-# start snippet residuals
+# mccole:residuals
 y_pred = predict(X, w)
 residuals = [y[i] - y_pred[i] for i in range(n)]
 
 print("mean residual:", sum(residuals) / len(residuals))
 print("residual range:", min(residuals), "to", max(residuals))
-# end snippet residuals
+# mccole:/residuals
 
 
-# start snippet evaluate
+# mccole:evaluate
 def mean_absolute_error(y_true, y_pred):
     """Average absolute difference between true and predicted values."""
     return sum(abs(t - p) for t, p in zip(y_true, y_pred)) / len(y_true)
@@ -121,10 +121,10 @@ y_test_pred = predict(X_test, w_train)
 
 print("training MAE:", mean_absolute_error(y_train, y_train_pred))
 print("test MAE:", mean_absolute_error(y_test, y_test_pred))
-# end snippet evaluate
+# mccole:/evaluate
 
 
-# start snippet plot
+# mccole:plot
 import altair as alt
 
 results = pl.DataFrame({
@@ -154,4 +154,4 @@ chart = (reference + points).properties(
 )
 
 chart.save("regression.json")
-# end snippet plot
+# mccole:/plot

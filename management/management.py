@@ -1,4 +1,4 @@
-# start snippet imports
+# mccole:imports
 import json
 from datetime import datetime, timezone
 
@@ -7,9 +7,9 @@ import polars as pl
 KINDS = ["storm", "flood", "power-outage", "fire"]
 STATUSES = ["reported", "triaged", "dispatched", "resolved"]
 SEVERITIES = ["low", "medium", "high"]
-# end snippet imports
+# mccole:/imports
 
-# start snippet dictionary
+# mccole:dictionary
 dictionary = [
     {"name": "id", "type": "integer", "units": None,
      "meaning": "unique identifier for an incident", "allowed": None},
@@ -28,25 +28,25 @@ dictionary = [
     {"name": "responder_id", "type": "integer", "units": None,
      "meaning": "id of the responder assigned", "allowed": "id present in responders"},
 ]
-# end snippet dictionary
+# mccole:/dictionary
 
-# start snippet describe
+# mccole:describe
 def describe(allowed):
     return ", ".join(allowed) if isinstance(allowed, list) else allowed
 
 dd = pl.DataFrame([{**row, "allowed": describe(row["allowed"])} for row in dictionary])
 print(dd)
-# end snippet describe
+# mccole:/describe
 
-# start snippet query_dictionary
+# mccole:query_dictionary
 print(dd.filter(pl.col("units").is_not_null()).select("name", "units"))
-# end snippet query_dictionary
+# mccole:/query_dictionary
 
-# start snippet categorical_fields
+# mccole:categorical_fields
 print([row["name"] for row in dictionary if isinstance(row["allowed"], list)])
-# end snippet categorical_fields
+# mccole:/categorical_fields
 
-# start snippet validate
+# mccole:validate
 def check_allowed(frame, dictionary):
     problems = []
     for row in dictionary:
@@ -57,9 +57,9 @@ def check_allowed(frame, dictionary):
             if value not in row["allowed"]:
                 problems.append((name, value))
     return problems
-# end snippet validate
+# mccole:/validate
 
-# start snippet incidents
+# mccole:incidents
 incidents = pl.DataFrame([
     {"id": 1, "timestamp": "2024-06-01T08:12:00", "latitude": -33.86,
      "longitude": 151.21, "kind": "storm", "severity": "high",
@@ -71,13 +71,13 @@ incidents = pl.DataFrame([
      "longitude": 150.90, "kind": "fire", "severity": "critical",
      "status": "dispatched", "responder_id": 7},
 ])
-# end snippet incidents
+# mccole:/incidents
 
-# start snippet check_contract
+# mccole:check_contract
 print(check_allowed(incidents, dictionary))
-# end snippet check_contract
+# mccole:/check_contract
 
-# start snippet provenance_log
+# mccole:provenance_log
 provenance = []
 
 def log_step(name, inputs, outputs):
@@ -89,9 +89,9 @@ def log_step(name, inputs, outputs):
     }
     provenance.append(entry)
     return entry
-# end snippet provenance_log
+# mccole:/provenance_log
 
-# start snippet run_pipeline
+# mccole:run_pipeline
 log_step("load", [], ["incidents"])
 
 cleaned = incidents.with_columns(pl.col("kind").str.to_lowercase())
@@ -99,24 +99,24 @@ log_step("normalize", ["incidents"], ["cleaned"])
 
 counts = cleaned.group_by("kind").len()
 log_step("summarize", ["cleaned"], ["counts_by_kind"])
-# end snippet run_pipeline
+# mccole:/run_pipeline
 
-# start snippet write_log
+# mccole:write_log
 with open("provenance.jsonl", "w") as f:
     for entry in provenance:
         f.write(json.dumps(entry) + "\n")
-# end snippet write_log
+# mccole:/write_log
 
-# start snippet read_back
+# mccole:read_back
 log = pl.read_ndjson("provenance.jsonl")
 print(log)
-# end snippet read_back
+# mccole:/read_back
 
-# start snippet query_log
+# mccole:query_log
 print(log.filter(pl.col("step") == "summarize").select("inputs", "outputs"))
-# end snippet query_log
+# mccole:/query_log
 
-# start snippet ecology_twin
+# mccole:ecology_twin
 observations_dict = [
     {"name": "species", "type": "string", "units": None,
      "meaning": "species identifier", "allowed": "controlled taxonomy"},
@@ -128,4 +128,4 @@ observations_dict = [
      "meaning": "length of the sample", "allowed": "positive"},
 ]
 print(pl.DataFrame([{**row, "allowed": describe(row["allowed"])} for row in observations_dict]))
-# end snippet ecology_twin
+# mccole:/ecology_twin

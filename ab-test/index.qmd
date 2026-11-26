@@ -11,34 +11,29 @@ distinct kind of analysis: experimentation and inference.
 -   We will simulate response times so the true answer is known, then test whether the pipeline recovers it.
 -   A fixed seed makes the random data reproducible.
 
-```{.python include="ab-test.py" snippet="setup"}
-```
+{{< inc ab-test/ab-test.py mark=setup >}}
 
 -   Each group has 200 responders, with response times drawn from a bell curve.
 -   Variant A has a mean of 120 seconds; variant B is a bit faster at 110 seconds.
 -   The two curves share a spread of 25 seconds, so the difference is real but not huge.
 
-```{.python include="ab-test.py" snippet="generate"}
-```
+{{< inc ab-test/ab-test.py mark=generate >}}
 
 -   Put both groups into one Polars dataframe, with a column recording which variant each row came from.
 
-```{.python include="ab-test.py" snippet="dataframe"}
-```
+{{< inc ab-test/ab-test.py mark=dataframe >}}
 
 -   The observed effect is the difference in means, A minus B.
 -   It is just a number; the rest of the lesson asks whether it is real or could be noise.
 
-```{.python include="ab-test.py" snippet="observed_difference"}
-```
+{{< inc ab-test/ab-test.py mark=observed_difference >}}
 
 -   The null hypothesis says there is no real difference: both groups come from the same distribution.
 -   Under the null, any difference we saw is just random assignment of labels.
 -   A permutation test simulates the null by shuffling the variant labels many times.
 -   Each shuffle recomputes the difference; if the labels do not matter, shuffled differences look like the real one.
 
-```{.python include="ab-test.py" snippet="permutation_test"}
-```
+{{< inc ab-test/ab-test.py mark=permutation_test >}}
 
 -   The p-value is how often shuffles look at least as extreme as the real data.
 -   A small p-value means the real difference is unlikely under the null, so we reject the null.
@@ -49,8 +44,7 @@ distinct kind of analysis: experimentation and inference.
 -   The bootstrap estimates the effect size with a confidence interval.
 -   Resample each group with replacement, recompute the difference, and repeat to build a distribution of plausible effects.
 
-```{.python include="ab-test.py" snippet="bootstrap"}
-```
+{{< inc ab-test/ab-test.py mark=bootstrap >}}
 
 -   The middle 95% of bootstrap differences is the confidence interval.
 -   The interval here should sit near the true 10 second gap and exclude 0.

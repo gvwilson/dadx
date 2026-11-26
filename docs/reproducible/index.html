@@ -32,7 +32,19 @@
 <li>We describe the graph in a file named <code>dodo.py</code>, with one function per step.</li>
 <li>Whatever your running example, <code>data/*.csv</code> stands in for its raw tables and <code>report.html</code> for its final summary.</li>
 </ul>
-<div class="sourceCode" id="cb1" data-include="reproducible.py" data-snippet="dodo"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb1" data-file="reproducible/reproducible.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> task_make_data():</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""Generate the raw CSV files."""</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> {</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>        <span class="st">"actions"</span>: [<span class="st">"python bin/make_data.py"</span>],</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>        <span class="st">"targets"</span>: [<span class="st">"data/records.csv"</span>, <span class="st">"data/events.csv"</span>],</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> task_report():</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""Build the report from the data and the analysis script."""</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> {</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        <span class="st">"file_dep"</span>: [<span class="st">"bin/script.py"</span>, <span class="st">"data/*.csv"</span>],</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>        <span class="st">"targets"</span>: [<span class="st">"report.html"</span>],</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        <span class="st">"actions"</span>: [<span class="st">"python bin/script.py"</span>],</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    }</span></code></pre></div>
 <ul>
 <li><code>targets</code> names the files a task produces.</li>
 <li><code>file_dep</code> names the files a task needs to read; <code>data/*.csv</code> is a glob that matches every CSV.</li>

@@ -48,15 +48,47 @@
 <li>We reuse the disaster example: a small <code>responders</code> table and a larger <code>incidents</code> table.</li>
 <li>Pin the random seed so every run produces the same rows.</li>
 </ul>
-<div class="sourceCode" id="cb1" data-include="db-pipe.py" data-snippet="setup"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb1" data-file="db-pipe/db-pipe.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> random</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> datetime <span class="im">import</span> date, datetime, timedelta</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> duckdb</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> polars <span class="im">as</span> pl</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>SEED <span class="op">=</span> <span class="dv">20261108</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>random.seed(SEED)</span></code></pre></div>
 <ul>
 <li><code>responders</code> has one row per person: an id, a name, a join date, and a role.</li>
 </ul>
-<div class="sourceCode" id="cb2" data-include="db-pipe.py" data-snippet="responders"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb2" data-file="db-pipe/db-pipe.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>FIRST <span class="op">=</span> [<span class="st">"Ada"</span>, <span class="st">"Grace"</span>, <span class="st">"Alan"</span>, <span class="st">"Edsger"</span>, <span class="st">"Barbara"</span>, <span class="st">"Donald"</span>, <span class="st">"Kathleen"</span>, <span class="st">"John"</span>]</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>LAST <span class="op">=</span> [<span class="st">"Lovelace"</span>, <span class="st">"Hopper"</span>, <span class="st">"Turing"</span>, <span class="st">"Dijkstra"</span>, <span class="st">"Liskov"</span>, <span class="st">"Knuth"</span>, <span class="st">"Booth"</span>, <span class="st">"Backus"</span>]</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>ROLES <span class="op">=</span> [<span class="st">"dispatcher"</span>, <span class="st">"field-officer"</span>, <span class="st">"medic"</span>, <span class="st">"coordinator"</span>]</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>start <span class="op">=</span> date(<span class="dv">2024</span>, <span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>responders <span class="op">=</span> pl.DataFrame({</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">"id"</span>: <span class="bu">range</span>(<span class="dv">1</span>, <span class="dv">9</span>),</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="st">"name"</span>: [<span class="ss">f"</span><span class="sc">{</span>random<span class="sc">.</span>choice(FIRST)<span class="sc">}</span><span class="ss"> </span><span class="sc">{</span>random<span class="sc">.</span>choice(LAST)<span class="sc">}</span><span class="ss">"</span> <span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">8</span>)],</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="st">"joined"</span>: [(start <span class="op">+</span> timedelta(days<span class="op">=</span>random.randint(<span class="dv">0</span>, <span class="dv">365</span>))).isoformat() <span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">8</span>)],</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="st">"role"</span>: [random.choice(ROLES) <span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">8</span>)],</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(responders)</span></code></pre></div>
 <ul>
 <li><code>incidents</code> has one row per report, with <code>responder_id</code> pointing back at a person.</li>
 </ul>
-<div class="sourceCode" id="cb3" data-include="db-pipe.py" data-snippet="incidents"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb3" data-file="db-pipe/db-pipe.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>KINDS <span class="op">=</span> [<span class="st">"storm"</span>, <span class="st">"flood"</span>, <span class="st">"power-outage"</span>, <span class="st">"fire"</span>]</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>STATUSES <span class="op">=</span> [<span class="st">"reported"</span>, <span class="st">"triaged"</span>, <span class="st">"dispatched"</span>, <span class="st">"resolved"</span>]</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>n <span class="op">=</span> <span class="dv">24</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>base <span class="op">=</span> datetime(<span class="dv">2024</span>, <span class="dv">6</span>, <span class="dv">1</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>incidents <span class="op">=</span> pl.DataFrame({</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">"id"</span>: <span class="bu">range</span>(<span class="dv">1</span>, n <span class="op">+</span> <span class="dv">1</span>),</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="st">"timestamp"</span>: [</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        (base <span class="op">+</span> timedelta(days<span class="op">=</span>random.randint(<span class="dv">0</span>, <span class="dv">60</span>), hours<span class="op">=</span>random.randint(<span class="dv">0</span>, <span class="dv">23</span>))).isoformat()</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(n)</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    ],</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="st">"latitude"</span>: [<span class="bu">round</span>(random.uniform(<span class="op">-</span><span class="fl">40.0</span>, <span class="op">-</span><span class="fl">30.0</span>), <span class="dv">4</span>) <span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(n)],</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="st">"longitude"</span>: [<span class="bu">round</span>(random.uniform(<span class="fl">140.0</span>, <span class="fl">150.0</span>), <span class="dv">4</span>) <span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(n)],</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="st">"kind"</span>: [random.choice(KINDS) <span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(n)],</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    <span class="st">"severity"</span>: [random.randint(<span class="dv">1</span>, <span class="dv">5</span>) <span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(n)],</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    <span class="st">"status"</span>: [random.choice(STATUSES) <span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(n)],</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    <span class="st">"responder_id"</span>: [random.randint(<span class="dv">1</span>, <span class="dv">8</span>) <span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(n)],</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(incidents)</span></code></pre></div>
 <h2 data-number="15.2" id="load-into-duckdb"><span class="header-section-number">15.2</span> Load into DuckDB</h2>
 <ul>
 <li>DuckDB is an embedded database: it runs inside our process, with no server to start.</li>
@@ -64,7 +96,35 @@
 <li>We create the tables with SQL DDL, then insert the Polars rows in one batch.</li>
 <li>(<code>con.register</code> can attach a Polars or pandas frame directly, but that path needs PyArrow; DDL keeps this lesson dependency-free.)</li>
 </ul>
-<div class="sourceCode" id="cb4" data-include="db-pipe.py" data-snippet="load"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb4" data-file="db-pipe/db-pipe.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>con <span class="op">=</span> duckdb.<span class="ex">connect</span>()</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>con.execute(<span class="st">"""</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="st">CREATE TABLE responders (</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="st">    id INTEGER,</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="st">    name VARCHAR,</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="st">    joined DATE,</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="st">    role VARCHAR</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="st">)</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="st">"""</span>)</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>con.executemany(</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="st">"INSERT INTO responders VALUES (?, ?, ?, ?)"</span>,</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    responders.rows(),</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>con.execute(<span class="st">"""</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="st">CREATE TABLE incidents (</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="st">    id INTEGER,</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="st">    timestamp TIMESTAMP,</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a><span class="st">    latitude DOUBLE,</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a><span class="st">    longitude DOUBLE,</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a><span class="st">    kind VARCHAR,</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a><span class="st">    severity INTEGER,</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a><span class="st">    status VARCHAR,</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a><span class="st">    responder_id INTEGER</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a><span class="st">)</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a><span class="st">"""</span>)</span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>con.executemany(</span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>    <span class="st">"INSERT INTO incidents VALUES (?, ?, ?, ?, ?, ?, ?, ?)"</span>,</span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>    incidents.rows(),</span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
 <ul>
 <li><code>executemany</code> binds each <code>?</code> placeholder to a value and inserts the whole batch in one call.</li>
 <li>The ISO timestamp strings are cast to real <code>TIMESTAMP</code> and <code>DATE</code> values by the engine.</li>
@@ -74,13 +134,23 @@
 <li><code>SELECT</code> picks columns; <code>WHERE</code> picks rows. Together they are Polars’ <code>select</code> and <code>filter</code>.</li>
 <li>SQL names the columns you want; the engine decides how to fetch them.</li>
 </ul>
-<div class="sourceCode" id="cb5" data-include="db-pipe.py" data-snippet="select_sql"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
-<div class="sourceCode" id="cb6" data-include="db-pipe.py" data-snippet="select_polars"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb5" data-file="db-pipe/db-pipe.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(con.execute(<span class="st">"SELECT id, kind, severity FROM incidents LIMIT 3"</span>).fetchall())</span></code></pre></div>
+<div class="sourceCode" id="cb6" data-file="db-pipe/db-pipe.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(incidents.select([<span class="st">"id"</span>, <span class="st">"kind"</span>, <span class="st">"severity"</span>]).head(<span class="dv">3</span>))</span></code></pre></div>
 <ul>
 <li>Filtering is a <code>WHERE</code> clause, and ordering is <code>ORDER BY</code>.</li>
 </ul>
-<div class="sourceCode" id="cb7" data-include="db-pipe.py" data-snippet="where_sql"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
-<div class="sourceCode" id="cb8" data-include="db-pipe.py" data-snippet="where_polars"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb7" data-file="db-pipe/db-pipe.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(con.execute(<span class="st">"""</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="st">SELECT id, kind, severity</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="st">FROM incidents</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="st">WHERE severity &gt;= 4</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="st">ORDER BY severity DESC</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="st">"""</span>).fetchall())</span></code></pre></div>
+<div class="sourceCode" id="cb8" data-file="db-pipe/db-pipe.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    incidents</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    .<span class="bu">filter</span>(pl.col(<span class="st">"severity"</span>) <span class="op">&gt;=</span> <span class="dv">4</span>)</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    .select([<span class="st">"id"</span>, <span class="st">"kind"</span>, <span class="st">"severity"</span>])</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    .sort(<span class="st">"severity"</span>, descending<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
 <ul>
 <li>Note the difference in mood: SQL states the condition as one declarative sentence; Polars spells out each step in order.</li>
 </ul>
@@ -88,8 +158,13 @@
 <ul>
 <li>Aggregation is <code>GROUP BY</code>: split rows into buckets, then compute one number per bucket.</li>
 </ul>
-<div class="sourceCode" id="cb9" data-include="db-pipe.py" data-snippet="group_by_sql"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
-<div class="sourceCode" id="cb10" data-include="db-pipe.py" data-snippet="group_by_polars"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb9" data-file="db-pipe/db-pipe.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(con.execute(<span class="st">"""</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="st">SELECT kind, COUNT(*) AS n</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="st">FROM incidents</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="st">GROUP BY kind</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="st">ORDER BY n DESC</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="st">"""</span>).fetchall())</span></code></pre></div>
+<div class="sourceCode" id="cb10" data-file="db-pipe/db-pipe.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(incidents.group_by(<span class="st">"kind"</span>).agg(pl.<span class="bu">len</span>().alias(<span class="st">"n"</span>)).sort(<span class="st">"n"</span>, descending<span class="op">=</span><span class="va">True</span>))</span></code></pre></div>
 <ul>
 <li><code>COUNT(*)</code> is <code>pl.len()</code>, and the alias <code>AS n</code> is <code>.alias("n")</code>.</li>
 <li>Both engines push the counting into optimized C code rather than a Python loop.</li>
@@ -99,8 +174,19 @@
 <li>A <code>JOIN</code> matches rows in two tables on a shared column, exactly like Polars’ <code>join</code>.</li>
 <li>Here we attach each responder’s name to the incidents they handled.</li>
 </ul>
-<div class="sourceCode" id="cb11" data-include="db-pipe.py" data-snippet="join_sql"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
-<div class="sourceCode" id="cb12" data-include="db-pipe.py" data-snippet="join_polars"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb11" data-file="db-pipe/db-pipe.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(con.execute(<span class="st">"""</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="st">SELECT i.id, i.kind, r.name</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="st">FROM incidents AS i</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="st">JOIN responders AS r ON i.responder_id = r.id</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="st">ORDER BY i.id</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="st">LIMIT 5</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="st">"""</span>).fetchall())</span></code></pre></div>
+<div class="sourceCode" id="cb12" data-file="db-pipe/db-pipe.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>    incidents</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    .join(responders, left_on<span class="op">=</span><span class="st">"responder_id"</span>, right_on<span class="op">=</span><span class="st">"id"</span>, how<span class="op">=</span><span class="st">"inner"</span>)</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    .select([<span class="st">"id"</span>, <span class="st">"kind"</span>, <span class="st">"name"</span>])</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>    .head(<span class="dv">5</span>)</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
 <ul>
 <li><code>AS</code> gives a table a short alias so column references read clearly.</li>
 <li><code>left_on</code> and <code>right_on</code> are the Polars mirror of SQL’s <code>ON i.responder_id = r.id</code>.</li>
@@ -110,8 +196,21 @@
 <ul>
 <li>Real questions combine operations: count incidents per status and show the average severity.</li>
 </ul>
-<div class="sourceCode" id="cb13" data-include="db-pipe.py" data-snippet="aggregate_sql"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
-<div class="sourceCode" id="cb14" data-include="db-pipe.py" data-snippet="aggregate_polars"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb13" data-file="db-pipe/db-pipe.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(con.execute(<span class="st">"""</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="st">SELECT status, COUNT(*) AS n, ROUND(AVG(severity), 2) AS avg_severity</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="st">FROM incidents</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="st">GROUP BY status</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="st">ORDER BY n DESC</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="st">"""</span>).fetchall())</span></code></pre></div>
+<div class="sourceCode" id="cb14" data-file="db-pipe/db-pipe.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>    incidents</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>    .group_by(<span class="st">"status"</span>)</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    .agg(</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>        pl.<span class="bu">len</span>().alias(<span class="st">"n"</span>),</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>        pl.col(<span class="st">"severity"</span>).mean().<span class="bu">round</span>(<span class="dv">2</span>).alias(<span class="st">"avg_severity"</span>),</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>    .sort(<span class="st">"n"</span>, descending<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
 <ul>
 <li>Same shape, same answer: SQL reads as one sentence, Polars as a chain of verbs.</li>
 </ul>

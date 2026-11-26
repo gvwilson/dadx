@@ -30,8 +30,7 @@ continuous outcome.
 -   The hidden truth is `response = 5 + 3*severity + 0.4*distance + noise`.
 -   If the fit recovers numbers near 5, 3, and 0.4, we know it works.
 
-```{.python include="regression.py" snippet="generate"}
-```
+{{< inc regression/regression.py mark=generate >}}
 
 ## The Normal Equations
 
@@ -43,8 +42,7 @@ continuous outcome.
 -   We build `X'X` and `X'y` with plain loops, then solve by Gaussian elimination.
 -   No NumPy: this is the whole idea, written out where we can see it.
 
-```{.python include="regression.py" snippet="normal_equations"}
-```
+{{< inc regression/regression.py mark=normal_equations >}}
 
 ## Fit and Interpret
 
@@ -55,8 +53,7 @@ continuous outcome.
 -   The distance slope means one more kilometre adds about 0.4 minutes.
 -   These meanings hold only because the relationship really is linear here.
 
-```{.python include="regression.py" snippet="fit"}
-```
+{{< inc regression/regression.py mark=fit >}}
 
 ## Look at the Residuals
 
@@ -66,8 +63,7 @@ continuous outcome.
 -   A pattern in residuals, like growing with severity, means the model missed structure.
 -   With synthetic noise the residuals should look random, which is the honest case.
 
-```{.python include="regression.py" snippet="residuals"}
-```
+{{< inc regression/regression.py mark=residuals >}}
 
 ## Evaluate on Held-Out Data
 
@@ -78,8 +74,7 @@ continuous outcome.
 -   Mean absolute error is the average size of the prediction error, in minutes.
 -   Training and test MAE should be close; a big gap is a warning sign.
 
-```{.python include="regression.py" snippet="evaluate"}
-```
+{{< inc regression/regression.py mark=evaluate >}}
 
 ## Plot Actual vs Predicted
 
@@ -90,8 +85,7 @@ continuous outcome.
 -   A tight cloud around the diagonal means the model explains most of the variation.
 -   A cloud that fans out means the error grows in one direction.
 
-```{.python include="regression.py" snippet="plot"}
-```
+{{< inc regression/regression.py mark=plot >}}
 
 ## Summary
 

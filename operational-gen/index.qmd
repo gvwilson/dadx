@@ -17,8 +17,7 @@ to find.
     standard library; `polars` holds the data and `altair` draws it.
 -   Pin the seed first so the series is identical on every run.
 
-```{.python include="operational-gen.py" snippet="imports"}
-```
+{{< inc operational-gen/operational-gen.py mark=imports >}}
 
 -   A time series decomposes into three parts. The trend is the slow, long-run
     movement. The seasonality is the repeating cycle. The noise is the random
@@ -33,8 +32,7 @@ to find.
 -   A river gauge records one number per timestamp. We synthesize two years of
     daily readings for the disaster example's `readings` table.
 
-```{.python include="operational-gen.py" snippet="river_constants"}
-```
+{{< inc operational-gen/operational-gen.py mark=river_constants >}}
 
 -   The level at day `t` is the base plus a linear trend, a sine wave that
     repeats every 365 days, and Gaussian noise.
@@ -43,8 +41,7 @@ to find.
 -   We tag that day in an `anomaly` column so later lessons have a labeled
     target, not just a story.
 
-```{.python include="operational-gen.py" snippet="make_river_levels"}
-```
+{{< inc operational-gen/operational-gen.py mark=make_river_levels >}}
 
 -   The timestamp is a real calendar date, one day apart, so the plot and any
     date arithmetic behave like real monitoring data.
@@ -60,8 +57,7 @@ to find.
 -   The trend and season are the slow rise and the yearly wave; the noise is
     the fuzz; the flood is the lone spike.
 
-```{.python include="operational-gen.py" snippet="plot_river"}
-```
+{{< inc operational-gen/operational-gen.py mark=plot_river >}}
 
 -   The red dot sits exactly on the injected point, because we put it there.
 -   A detector that flags that point is right; one that misses it or flags the
@@ -76,15 +72,13 @@ to find.
 -   A real `environment` row keys each reading to a `site_id`; here we generate
     one site's series.
 
-```{.python include="operational-gen.py" snippet="make_environment"}
-```
+{{< inc operational-gen/operational-gen.py mark=make_environment >}}
 
 -   The temperature series is a seasonal wave around a fixed mean; the
     pollution series is a flat baseline with a single spike.
 -   Plot pollution to see the same injected-anomaly shape in a different unit.
 
-```{.python include="operational-gen.py" snippet="plot_pollution"}
-```
+{{< inc operational-gen/operational-gen.py mark=plot_pollution >}}
 
 -   The spike stands out from the baseline exactly as the flood did, so the
     monitoring lesson's target exists in both running examples.

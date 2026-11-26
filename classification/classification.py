@@ -1,13 +1,13 @@
-# start snippet setup
+# mccole:setup
 import random
 
 import polars as pl
 
 SEED = 20261108
 random.seed(SEED)
-# end snippet setup
+# mccole:/setup
 
-# start snippet generate
+# mccole:generate
 KINDS = ["storm", "flood", "power-outage", "fire"]
 KIND_BASE = {"storm": 0.02, "flood": 0.05, "power-outage": 0.00, "fire": 0.10}
 SEVERITY_CHANCE = {1: 0.05, 2: 0.08, 3: 0.12, 4: 0.50, 5: 0.75}
@@ -27,26 +27,26 @@ def make_incidents(n):
 incidents = make_incidents(500)
 df = pl.DataFrame(incidents)
 print(df.head())
-# end snippet generate
+# mccole:/generate
 
-# start snippet rate
+# mccole:rate
 rate = df["escalated"].mean()
 print(f"escalation rate: {rate:.0%}")
-# end snippet rate
+# mccole:/rate
 
-# start snippet split
+# mccole:split
 n_train = int(len(df) * 0.8)
 train = df.slice(0, n_train)
 test = df.slice(n_train, len(df) - n_train)
 print(f"train: {len(train)} rows, test: {len(test)} rows")
-# end snippet split
+# mccole:/split
 
-# start snippet predict
+# mccole:predict
 def predict(severity, threshold):
     return 1 if severity >= threshold else 0
-# end snippet predict
+# mccole:/predict
 
-# start snippet confusion
+# mccole:confusion
 def confusion(y_true, y_pred):
     tp = fp = tn = fn = 0
     for t, p in zip(y_true, y_pred):
@@ -71,9 +71,9 @@ def stats(cm):
         else 0.0
     )
     return accuracy, precision, recall, f1
-# end snippet confusion
+# mccole:/confusion
 
-# start snippet fit_threshold
+# mccole:fit_threshold
 train_true = train["escalated"].to_list()
 train_sev = train["severity"].to_list()
 
@@ -86,9 +86,9 @@ for threshold in range(1, 6):
     print(f"threshold {threshold}: F1 = {score:.2f}")
 
 print(f"chosen threshold: severity >= {best_threshold}")
-# end snippet fit_threshold
+# mccole:/fit_threshold
 
-# start snippet evaluate
+# mccole:evaluate
 test_true = test["escalated"].to_list()
 test_sev = test["severity"].to_list()
 test_pred = [predict(s, best_threshold) for s in test_sev]
@@ -99,20 +99,20 @@ print("              predicted")
 print("               no   yes")
 print(f"actual no    {cm['tn']:>4}  {cm['fp']:>4}")
 print(f"actual yes   {cm['fn']:>4}  {cm['tp']:>4}")
-# end snippet evaluate
+# mccole:/evaluate
 
-# start snippet metrics
+# mccole:metrics
 accuracy, precision, recall, f1 = stats(cm)
 print(f"accuracy  = {accuracy:.2f}")
 print(f"precision = {precision:.2f}")
 print(f"recall    = {recall:.2f}")
 print(f"F1        = {f1:.2f}")
-# end snippet metrics
+# mccole:/metrics
 
-# start snippet baseline
+# mccole:baseline
 never_pred = [0] * len(test_true)
 never_cm = confusion(test_true, never_pred)
 never_acc, _, never_recall, _ = stats(never_cm)
 print(f"always-no accuracy = {never_acc:.2f}")
 print(f"always-no recall   = {never_recall:.2f}")
-# end snippet baseline
+# mccole:/baseline

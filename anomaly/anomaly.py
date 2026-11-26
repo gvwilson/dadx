@@ -1,4 +1,4 @@
-# start snippet import
+# mccole:import
 import random
 import statistics
 from datetime import datetime, timedelta
@@ -7,9 +7,9 @@ import altair as alt
 import polars as pl
 
 random.seed(7)
-# end snippet import
+# mccole:/import
 
-# start snippet generate
+# mccole:generate
 N = 200                  # hourly readings, a bit over a week
 BASELINE = 2.0           # meters: the gauge's usual level
 NOISE = 0.1              # meters: hour-to-hour jitter
@@ -27,15 +27,15 @@ df = pl.DataFrame({
     "level": levels,
 })
 print(df.head())
-# end snippet generate
+# mccole:/generate
 
-# start snippet z_scores
+# mccole:z_scores
 mean = statistics.fmean(df["level"])
 sd = statistics.stdev(df["level"])
 print(mean, sd)
-# end snippet z_scores
+# mccole:/z_scores
 
-# start snippet flag
+# mccole:flag
 THRESHOLD = 3.0
 
 df = df.with_columns(
@@ -45,17 +45,17 @@ df = df.with_columns(
     (pl.col("z").abs() > THRESHOLD).alias("flag"),
 )
 print(df.filter(pl.col("flag")))
-# end snippet flag
+# mccole:/flag
 
-# start snippet plot
+# mccole:plot
 base = alt.Chart(df).encode(x="timestamp:T")
 line = base.mark_line().encode(y="level:Q")
 marks = base.mark_point(color="red", size=70).encode(y="level:Q").transform_filter("datum.flag")
 chart = (line + marks).properties(width=600, height=200)
 chart.save("anomaly.json")
-# end snippet plot
+# mccole:/plot
 
-# start snippet rolling
+# mccole:rolling
 WINDOW = 12  # hours: a moving baseline
 
 df = df.with_columns(
@@ -69,4 +69,4 @@ df = df.with_columns(
     (pl.col("roll_z").abs() > THRESHOLD).alias("roll_flag"),
 )
 print(df.filter(pl.col("roll_flag")))
-# end snippet rolling
+# mccole:/rolling

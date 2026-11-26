@@ -47,33 +47,77 @@
 <li>The allowed values for a categorical field are the controlled vocabulary for that column: nothing else may appear.</li>
 <li>Writing those vocabularies as constants means the dictionary and the validation code share one source of truth.</li>
 </ul>
-<div class="sourceCode" id="cb1" data-include="management.py" data-snippet="imports"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb1" data-file="management/management.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> datetime <span class="im">import</span> datetime, timezone</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> polars <span class="im">as</span> pl</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>KINDS <span class="op">=</span> [<span class="st">"storm"</span>, <span class="st">"flood"</span>, <span class="st">"power-outage"</span>, <span class="st">"fire"</span>]</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>STATUSES <span class="op">=</span> [<span class="st">"reported"</span>, <span class="st">"triaged"</span>, <span class="st">"dispatched"</span>, <span class="st">"resolved"</span>]</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>SEVERITIES <span class="op">=</span> [<span class="st">"low"</span>, <span class="st">"medium"</span>, <span class="st">"high"</span>]</span></code></pre></div>
 <ul>
 <li>Store the dictionary as a list of dicts first; a list is easy to read and edit, and every other tool can import it.</li>
 <li>A categorical field stores its allowed values as a list; a numeric field stores a description of its range; <code>None</code> means the field is not constrained.</li>
 </ul>
-<div class="sourceCode" id="cb2" data-include="management.py" data-snippet="dictionary"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb2" data-file="management/management.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>dictionary <span class="op">=</span> [</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    {<span class="st">"name"</span>: <span class="st">"id"</span>, <span class="st">"type"</span>: <span class="st">"integer"</span>, <span class="st">"units"</span>: <span class="va">None</span>,</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>     <span class="st">"meaning"</span>: <span class="st">"unique identifier for an incident"</span>, <span class="st">"allowed"</span>: <span class="va">None</span>},</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    {<span class="st">"name"</span>: <span class="st">"timestamp"</span>, <span class="st">"type"</span>: <span class="st">"datetime"</span>, <span class="st">"units"</span>: <span class="va">None</span>,</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>     <span class="st">"meaning"</span>: <span class="st">"when the incident was reported"</span>, <span class="st">"allowed"</span>: <span class="va">None</span>},</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    {<span class="st">"name"</span>: <span class="st">"latitude"</span>, <span class="st">"type"</span>: <span class="st">"float"</span>, <span class="st">"units"</span>: <span class="st">"decimal degrees"</span>,</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>     <span class="st">"meaning"</span>: <span class="st">"north-south position"</span>, <span class="st">"allowed"</span>: <span class="st">"between -40.0 and -30.0"</span>},</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    {<span class="st">"name"</span>: <span class="st">"longitude"</span>, <span class="st">"type"</span>: <span class="st">"float"</span>, <span class="st">"units"</span>: <span class="st">"decimal degrees"</span>,</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>     <span class="st">"meaning"</span>: <span class="st">"east-west position"</span>, <span class="st">"allowed"</span>: <span class="st">"between 140.0 and 150.0"</span>},</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    {<span class="st">"name"</span>: <span class="st">"kind"</span>, <span class="st">"type"</span>: <span class="st">"string"</span>, <span class="st">"units"</span>: <span class="va">None</span>,</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>     <span class="st">"meaning"</span>: <span class="st">"the type of incident"</span>, <span class="st">"allowed"</span>: KINDS},</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    {<span class="st">"name"</span>: <span class="st">"severity"</span>, <span class="st">"type"</span>: <span class="st">"string"</span>, <span class="st">"units"</span>: <span class="va">None</span>,</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>     <span class="st">"meaning"</span>: <span class="st">"how serious the incident is"</span>, <span class="st">"allowed"</span>: SEVERITIES},</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    {<span class="st">"name"</span>: <span class="st">"status"</span>, <span class="st">"type"</span>: <span class="st">"string"</span>, <span class="st">"units"</span>: <span class="va">None</span>,</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>     <span class="st">"meaning"</span>: <span class="st">"where the incident sits in the response workflow"</span>, <span class="st">"allowed"</span>: STATUSES},</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    {<span class="st">"name"</span>: <span class="st">"responder_id"</span>, <span class="st">"type"</span>: <span class="st">"integer"</span>, <span class="st">"units"</span>: <span class="va">None</span>,</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>     <span class="st">"meaning"</span>: <span class="st">"id of the responder assigned"</span>, <span class="st">"allowed"</span>: <span class="st">"id present in responders"</span>},</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>]</span></code></pre></div>
 <ul>
 <li>Turn the list into a dataframe so the dictionary renders as a table and can be queried. This is the point of “metadata is data”: the dictionary is just another table.</li>
 <li>Lists do not display well in a cell, so join them into a comma-separated string for display and keep the original list for validation.</li>
 </ul>
-<div class="sourceCode" id="cb3" data-include="management.py" data-snippet="describe"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb3" data-file="management/management.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> describe(allowed):</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="st">", "</span>.join(allowed) <span class="cf">if</span> <span class="bu">isinstance</span>(allowed, <span class="bu">list</span>) <span class="cf">else</span> allowed</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>dd <span class="op">=</span> pl.DataFrame([{<span class="op">**</span>row, <span class="st">"allowed"</span>: describe(row[<span class="st">"allowed"</span>])} <span class="cf">for</span> row <span class="kw">in</span> dictionary])</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(dd)</span></code></pre></div>
 <ul>
 <li>Because the dictionary is a table, ordinary dataframe queries answer questions about the data without touching the data itself.</li>
 </ul>
-<div class="sourceCode" id="cb4" data-include="management.py" data-snippet="query_dictionary"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
-<div class="sourceCode" id="cb5" data-include="management.py" data-snippet="categorical_fields"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb4" data-file="management/management.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(dd.<span class="bu">filter</span>(pl.col(<span class="st">"units"</span>).is_not_null()).select(<span class="st">"name"</span>, <span class="st">"units"</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb5" data-file="management/management.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>([row[<span class="st">"name"</span>] <span class="cf">for</span> row <span class="kw">in</span> dictionary <span class="cf">if</span> <span class="bu">isinstance</span>(row[<span class="st">"allowed"</span>], <span class="bu">list</span>)])</span></code></pre></div>
 <h2 data-number="4.2" id="the-dictionary-is-a-contract"><span class="header-section-number">4.2</span> The dictionary is a contract</h2>
 <ul>
 <li>The producer promises to write values the dictionary allows; the consumer relies on that promise. The dictionary is the written contract both sides read.</li>
 <li>Validation turns the contract from a promise into a check: walk the categorical fields and flag any value outside the controlled vocabulary.</li>
 </ul>
-<div class="sourceCode" id="cb6" data-include="management.py" data-snippet="validate"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb6" data-file="management/management.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> check_allowed(frame, dictionary):</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    problems <span class="op">=</span> []</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> row <span class="kw">in</span> dictionary:</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="kw">not</span> <span class="bu">isinstance</span>(row[<span class="st">"allowed"</span>], <span class="bu">list</span>):</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>            <span class="cf">continue</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>        name <span class="op">=</span> row[<span class="st">"name"</span>]</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> value <span class="kw">in</span> frame[name].to_list():</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> value <span class="kw">not</span> <span class="kw">in</span> row[<span class="st">"allowed"</span>]:</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>                problems.append((name, value))</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> problems</span></code></pre></div>
 <ul>
 <li>A few hand-written rows stand in for the producer’s output. Two values break the contract on purpose: <code>"Flood"</code> is capitalized and <code>"critical"</code> is not a severity in the dictionary.</li>
 </ul>
-<div class="sourceCode" id="cb7" data-include="management.py" data-snippet="incidents"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
-<div class="sourceCode" id="cb8" data-include="management.py" data-snippet="check_contract"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb7" data-file="management/management.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>incidents <span class="op">=</span> pl.DataFrame([</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    {<span class="st">"id"</span>: <span class="dv">1</span>, <span class="st">"timestamp"</span>: <span class="st">"2024-06-01T08:12:00"</span>, <span class="st">"latitude"</span>: <span class="op">-</span><span class="fl">33.86</span>,</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>     <span class="st">"longitude"</span>: <span class="fl">151.21</span>, <span class="st">"kind"</span>: <span class="st">"storm"</span>, <span class="st">"severity"</span>: <span class="st">"high"</span>,</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>     <span class="st">"status"</span>: <span class="st">"reported"</span>, <span class="st">"responder_id"</span>: <span class="dv">3</span>},</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    {<span class="st">"id"</span>: <span class="dv">2</span>, <span class="st">"timestamp"</span>: <span class="st">"2024-06-01T08:30:00"</span>, <span class="st">"latitude"</span>: <span class="op">-</span><span class="fl">33.87</span>,</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>     <span class="st">"longitude"</span>: <span class="fl">151.20</span>, <span class="st">"kind"</span>: <span class="st">"Flood"</span>, <span class="st">"severity"</span>: <span class="st">"medium"</span>,</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>     <span class="st">"status"</span>: <span class="st">"triaged"</span>, <span class="st">"responder_id"</span>: <span class="dv">3</span>},</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>    {<span class="st">"id"</span>: <span class="dv">3</span>, <span class="st">"timestamp"</span>: <span class="st">"2024-06-01T09:05:00"</span>, <span class="st">"latitude"</span>: <span class="op">-</span><span class="fl">34.00</span>,</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>     <span class="st">"longitude"</span>: <span class="fl">150.90</span>, <span class="st">"kind"</span>: <span class="st">"fire"</span>, <span class="st">"severity"</span>: <span class="st">"critical"</span>,</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>     <span class="st">"status"</span>: <span class="st">"dispatched"</span>, <span class="st">"responder_id"</span>: <span class="dv">7</span>},</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>])</span></code></pre></div>
+<div class="sourceCode" id="cb8" data-file="management/management.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(check_allowed(incidents, dictionary))</span></code></pre></div>
 <ul>
 <li>The two violations are the contract doing its job: without the dictionary, <code>"Flood"</code> and <code>"critical"</code> would silently become separate categories in every downstream summary.</li>
 </ul>
@@ -83,20 +127,36 @@
 <li>A provenance log is a sequence of records, one per transformation step, each naming the step, its inputs, its outputs, and when it ran.</li>
 <li>Appending one small dict per step keeps the log simple and machine-readable.</li>
 </ul>
-<div class="sourceCode" id="cb9" data-include="management.py" data-snippet="provenance_log"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb9" data-file="management/management.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>provenance <span class="op">=</span> []</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> log_step(name, inputs, outputs):</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    entry <span class="op">=</span> {</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>        <span class="st">"step"</span>: name,</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>        <span class="st">"inputs"</span>: inputs,</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>        <span class="st">"outputs"</span>: outputs,</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>        <span class="st">"time"</span>: datetime.now(timezone.utc).isoformat(),</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>    provenance.append(entry)</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> entry</span></code></pre></div>
 <ul>
 <li>Run a small pipeline over the incidents and log each step. The log is the audit trail that links the final summary back to the raw rows.</li>
 </ul>
-<div class="sourceCode" id="cb10" data-include="management.py" data-snippet="run_pipeline"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb10" data-file="management/management.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>log_step(<span class="st">"load"</span>, [], [<span class="st">"incidents"</span>])</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>cleaned <span class="op">=</span> incidents.with_columns(pl.col(<span class="st">"kind"</span>).<span class="bu">str</span>.to_lowercase())</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>log_step(<span class="st">"normalize"</span>, [<span class="st">"incidents"</span>], [<span class="st">"cleaned"</span>])</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>counts <span class="op">=</span> cleaned.group_by(<span class="st">"kind"</span>).<span class="bu">len</span>()</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>log_step(<span class="st">"summarize"</span>, [<span class="st">"cleaned"</span>], [<span class="st">"counts_by_kind"</span>])</span></code></pre></div>
 <ul>
 <li>Write the log as JSON lines: one JSON object per line, easy to append and easy to read back with any tool.</li>
 </ul>
-<div class="sourceCode" id="cb11" data-include="management.py" data-snippet="write_log"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb11" data-file="management/management.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> <span class="bu">open</span>(<span class="st">"provenance.jsonl"</span>, <span class="st">"w"</span>) <span class="im">as</span> f:</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> entry <span class="kw">in</span> provenance:</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>        f.write(json.dumps(entry) <span class="op">+</span> <span class="st">"</span><span class="ch">\n</span><span class="st">"</span>)</span></code></pre></div>
 <ul>
 <li>Reading the log back as a dataframe closes the loop: the metadata layer is itself queryable data, so you can ask “what were the inputs to the summary?”</li>
 </ul>
-<div class="sourceCode" id="cb12" data-include="management.py" data-snippet="read_back"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
-<div class="sourceCode" id="cb13" data-include="management.py" data-snippet="query_log"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb12" data-file="management/management.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>log <span class="op">=</span> pl.read_ndjson(<span class="st">"provenance.jsonl"</span>)</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(log)</span></code></pre></div>
+<div class="sourceCode" id="cb13" data-file="management/management.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(log.<span class="bu">filter</span>(pl.col(<span class="st">"step"</span>) <span class="op">==</span> <span class="st">"summarize"</span>).select(<span class="st">"inputs"</span>, <span class="st">"outputs"</span>))</span></code></pre></div>
 <ul>
 <li>Without this log, a summary is a rumor: you cannot say how it was made or re-make it.</li>
 <li>The dictionary says what the data means; the log says where it came from. Together they are the metadata layer that makes a pipeline reproducible.</li>
@@ -106,7 +166,17 @@
 <li>The observations table needs the same treatment; only the fields differ.</li>
 <li>Units matter more here: <code>mass_g</code> is grams, <code>length_mm</code> is millimeters, and <code>count</code> is a number of individuals.</li>
 </ul>
-<div class="sourceCode" id="cb14" data-include="management.py" data-snippet="ecology_twin"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb14" data-file="management/management.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>observations_dict <span class="op">=</span> [</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>    {<span class="st">"name"</span>: <span class="st">"species"</span>, <span class="st">"type"</span>: <span class="st">"string"</span>, <span class="st">"units"</span>: <span class="va">None</span>,</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>     <span class="st">"meaning"</span>: <span class="st">"species identifier"</span>, <span class="st">"allowed"</span>: <span class="st">"controlled taxonomy"</span>},</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    {<span class="st">"name"</span>: <span class="st">"count"</span>, <span class="st">"type"</span>: <span class="st">"integer"</span>, <span class="st">"units"</span>: <span class="st">"individuals"</span>,</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>     <span class="st">"meaning"</span>: <span class="st">"number observed at the site"</span>, <span class="st">"allowed"</span>: <span class="st">"non-negative"</span>},</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>    {<span class="st">"name"</span>: <span class="st">"mass_g"</span>, <span class="st">"type"</span>: <span class="st">"float"</span>, <span class="st">"units"</span>: <span class="st">"grams"</span>,</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>     <span class="st">"meaning"</span>: <span class="st">"mass of the sample"</span>, <span class="st">"allowed"</span>: <span class="st">"positive"</span>},</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>    {<span class="st">"name"</span>: <span class="st">"length_mm"</span>, <span class="st">"type"</span>: <span class="st">"float"</span>, <span class="st">"units"</span>: <span class="st">"millimeters"</span>,</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>     <span class="st">"meaning"</span>: <span class="st">"length of the sample"</span>, <span class="st">"allowed"</span>: <span class="st">"positive"</span>},</span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>]</span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(pl.DataFrame([{<span class="op">**</span>row, <span class="st">"allowed"</span>: describe(row[<span class="st">"allowed"</span>])} <span class="cf">for</span> row <span class="kw">in</span> observations_dict]))</span></code></pre></div>
 
 </main>
 <footer class="page-footer">

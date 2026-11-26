@@ -1,11 +1,11 @@
-# start snippet mock_server_imports
+# mccole:mock_server_imports
 import json
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
-# end snippet mock_server_imports
+# mccole:/mock_server_imports
 
-# start snippet mock_data
+# mccole:mock_data
 REPORTS = [
     {"id": 1, "event": "cyclone", "severity": 4, "latitude": -32.5, "longitude": 141.2, "reported": "2024-06-01T08:12:00"},
     {"id": 2, "event": "flash-flood", "severity": 3, "latitude": -33.1, "longitude": 142.9, "reported": "2024-06-01T13:05:00"},
@@ -15,9 +15,9 @@ REPORTS = [
     {"id": 6, "event": "flash-flood", "severity": 2, "latitude": -32.9, "longitude": 142.1, "reported": "2024-06-05T07:55:00"},
 ]
 PAGE_SIZE = 3
-# end snippet mock_data
+# mccole:/mock_data
 
-# start snippet storm_handler
+# mccole:storm_handler
 class StormHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed = urlparse(self.path)
@@ -35,16 +35,16 @@ class StormHandler(BaseHTTPRequestHandler):
 
     def log_message(self, *args):
         pass
-# end snippet storm_handler
+# mccole:/storm_handler
 
-# start snippet start_server
+# mccole:start_server
 server = ThreadingHTTPServer(("127.0.0.1", 0), StormHandler)
 port = server.server_address[1]
 threading.Thread(target=server.serve_forever, daemon=True).start()
 BASE_URL = f"http://127.0.0.1:{port}"
-# end snippet start_server
+# mccole:/start_server
 
-# start snippet fetch_with_cache
+# mccole:fetch_with_cache
 import httpx
 
 cache = {}
@@ -60,9 +60,9 @@ def fetch(url):
     data = response.json()
     cache[url] = data
     return data
-# end snippet fetch_with_cache
+# mccole:/fetch_with_cache
 
-# start snippet paginate
+# mccole:paginate
 import time
 
 def fetch_all(base_url):
@@ -81,9 +81,9 @@ def fetch_all(base_url):
 reports = fetch_all(BASE_URL)
 print("reports:", len(reports))
 print("HTTP requests so far:", fetch_count)
-# end snippet paginate
+# mccole:/paginate
 
-# start snippet transform
+# mccole:transform
 def transform(item):
     return (
         item["id"],
@@ -96,9 +96,9 @@ def transform(item):
 
 rows = [transform(r) for r in reports]
 print(rows[0])
-# end snippet transform
+# mccole:/transform
 
-# start snippet load
+# mccole:load
 import duckdb
 
 con = duckdb.connect(":memory:")
@@ -112,14 +112,14 @@ CREATE TABLE storm_reports (
     reported TIMESTAMP
 )
 """)
-# end snippet load
+# mccole:/load
 
-# start snippet insert
+# mccole:insert
 con.executemany("INSERT INTO storm_reports VALUES (?, ?, ?, ?, ?, ?)", rows)
 print(con.execute("SELECT COUNT(*) FROM storm_reports").fetchone())
-# end snippet insert
+# mccole:/insert
 
-# start snippet query
+# mccole:query
 print(
     con.execute(
         """
@@ -130,10 +130,10 @@ print(
         """
     ).fetchall()
 )
-# end snippet query
+# mccole:/query
 
-# start snippet rerun_from_cache
+# mccole:rerun_from_cache
 reports_again = fetch_all(BASE_URL)
 print("reports:", len(reports_again))
 print("HTTP requests so far:", fetch_count)
-# end snippet rerun_from_cache
+# mccole:/rerun_from_cache

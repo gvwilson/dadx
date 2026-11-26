@@ -17,24 +17,21 @@ segmentation.
     standard library; `polars` builds the table and `altair` plots it. We fix
     the seed so the synthetic blobs are identical on every run.
 
-```{.python include="clustering.py" snippet="imports"}
-```
+{{< inc clustering/clustering.py mark=imports >}}
 
 -   Each incident has two numeric features: a `kind_code` (a numeric encoding
     of the incident kind) and a `severity` score. We make four true groups and
     scatter points around each group's center with `random.gauss`, so the data
     has real structure for k-means to find.
 
-```{.python include="clustering.py" snippet="generate"}
-```
+{{< inc clustering/clustering.py mark=generate >}}
 
 -   `kind_code` is a number because k-means works on distances, and distances
     need numbers. The text label stays alongside for interpretation later.
 -   Plot the raw points to see the structure we are trying to recover. The
     color is severity, not cluster: we do not know the clusters yet.
 
-```{.python include="clustering.py" snippet="plot_before"}
-```
+{{< inc clustering/clustering.py mark=plot_before >}}
 
 -   Four loose blobs are visible. k-means will recover them from distance
     alone, with no labels, which is the whole point of clustering.
@@ -46,41 +43,35 @@ segmentation.
 -   Distance is Euclidean: the straight-line distance in the feature space,
     from `math.dist`.
 
-```{.python include="clustering.py" snippet="distance"}
-```
+{{< inc clustering/clustering.py mark=distance >}}
 
 -   Start by choosing k points as initial centroids. Random starting points are
     the usual choice; fixing the seed makes the start reproducible.
 
-```{.python include="clustering.py" snippet="initialize"}
-```
+{{< inc clustering/clustering.py mark=initialize >}}
 
 -   Assignment: each point joins the nearest centroid. Update: each centroid
     moves to the mean of its members. That alternation is where the name
     "k-means" comes from.
 
-```{.python include="clustering.py" snippet="assign"}
-```
+{{< inc clustering/clustering.py mark=assign >}}
 
 -   Alternate the two steps until the assignment stops changing: that is
     convergence. We cap the loop in case it oscillates.
 
-```{.python include="clustering.py" snippet="kmeans"}
-```
+{{< inc clustering/clustering.py mark=kmeans >}}
 
 -   Turn the two feature columns into a list of points, run k-means with k
     equal to the number of groups we generated, and attach the result.
 
-```{.python include="clustering.py" snippet="cluster"}
-```
+{{< inc clustering/clustering.py mark=cluster >}}
 
 ## Look at the clusters
 
 -   Plot each point colored by its cluster. The colors are the structure
     k-means found; they are not yet meanings.
 
-```{.python include="clustering.py" snippet="plot_clusters"}
-```
+{{< inc clustering/clustering.py mark=plot_clusters >}}
 
 -   The four colors line up with the four blobs, so the algorithm found the
     structure we planted. It did not know the group labels; it worked from
@@ -92,8 +83,7 @@ segmentation.
     records; what it stands for is our job to decide.
 -   Summarize each cluster by the kinds it contains and its average severity.
 
-```{.python include="clustering.py" snippet="interpret"}
-```
+{{< inc clustering/clustering.py mark=interpret >}}
 
 -   Each cluster has a dominant kind and a severity level, so we can read them
     as segments: one cluster is mild storms, another is severe fires, and so
@@ -109,8 +99,7 @@ segmentation.
 -   Stability first. A single random start is a gamble: if two starting
     centroids land in the same blob, the final split can come out wrong.
 
-```{.python include="clustering.py" snippet="validate"}
-```
+{{< inc clustering/clustering.py mark=validate >}}
 
 -   The second run's centroids land in different places, so it found a
     different grouping. One start is not enough to trust.
@@ -118,19 +107,16 @@ segmentation.
     members sit tightest around their centroids. That tightness is the
     within-cluster sum of squares.
 
-```{.python include="clustering.py" snippet="sum_squares"}
-```
+{{< inc clustering/clustering.py mark=sum_squares >}}
 
 -   Run several starts and keep the best by that score.
 
-```{.python include="clustering.py" snippet="kmeans_best"}
-```
+{{< inc clustering/clustering.py mark=kmeans_best >}}
 
 -   With the best of eight starts, the answer is the same whichever eight
     starts we draw, so the grouping is stable after all.
 
-```{.python include="clustering.py" snippet="validate_best"}
-```
+{{< inc clustering/clustering.py mark=validate_best >}}
 
 -   We compare sorted centroid positions, not label ids, because the numbering
     may permute between runs while the geometry stays the same.

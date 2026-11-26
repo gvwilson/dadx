@@ -49,13 +49,33 @@
 <li>The disaster example forecasts <code>river_level</code> from the <code>readings</code> series; the ecology example forecasts population <code>count</code> from the <code>environment</code> series, and the same code runs with the column renamed.</li>
 <li>Pin the seed first so the series is reproducible.</li>
 </ul>
-<div class="sourceCode" id="cb1" data-include="forecasting.py" data-snippet="setup"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb1" data-file="forecasting/forecasting.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> math</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> random</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> altair <span class="im">as</span> alt</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> polars <span class="im">as</span> pl</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>SEED <span class="op">=</span> <span class="dv">20261108</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>random.seed(SEED)</span></code></pre></div>
 <ul>
 <li>A monthly reading over six years gives 72 points.</li>
 <li>The level is a base height plus a trend that rises a little each month, a sine wave that repeats every 12 months, and Gaussian noise.</li>
 <li>The sine wave is the season: winter highs and summer lows, or any repeating yearly pattern.</li>
 </ul>
-<div class="sourceCode" id="cb2" data-include="forecasting.py" data-snippet="generate"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb2" data-file="forecasting/forecasting.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>N_YEARS <span class="op">=</span> <span class="dv">6</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>PERIOD <span class="op">=</span> <span class="dv">12</span>                 <span class="co"># months per year</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>BASE <span class="op">=</span> <span class="fl">3.0</span>                  <span class="co"># metres</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>SLOPE <span class="op">=</span> <span class="fl">0.02</span>                <span class="co"># metres per month</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>AMPLITUDE <span class="op">=</span> <span class="fl">0.8</span>             <span class="co"># metres</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>PHASE <span class="op">=</span> math.pi <span class="op">/</span> <span class="dv">6</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>NOISE <span class="op">=</span> <span class="fl">0.15</span>                <span class="co"># metres</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> make_river_levels(n):</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    rows <span class="op">=</span> []</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> t <span class="kw">in</span> <span class="bu">range</span>(n):</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>        seasonal <span class="op">=</span> AMPLITUDE <span class="op">*</span> math.sin(<span class="dv">2</span> <span class="op">*</span> math.pi <span class="op">*</span> t <span class="op">/</span> PERIOD <span class="op">+</span> PHASE)</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        noise <span class="op">=</span> random.gauss(<span class="fl">0.0</span>, NOISE)</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>        rows.append({<span class="st">"t"</span>: t, <span class="st">"level"</span>: BASE <span class="op">+</span> SLOPE <span class="op">*</span> t <span class="op">+</span> seasonal <span class="op">+</span> noise})</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> rows</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> pl.DataFrame(make_river_levels(N_YEARS <span class="op">*</span> PERIOD))</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(df.head())</span></code></pre></div>
 <ul>
 <li><code>t</code> is the month index; the level is everything else.</li>
 </ul>
@@ -65,36 +85,77 @@
 <li>The held-out points are the recent past, and they are the honest test: the model never sees them while it is being fit.</li>
 <li>We hold out the final year.</li>
 </ul>
-<div class="sourceCode" id="cb3" data-include="forecasting.py" data-snippet="split"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb3" data-file="forecasting/forecasting.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>HOLDOUT <span class="op">=</span> <span class="dv">12</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>train <span class="op">=</span> df.<span class="bu">slice</span>(<span class="dv">0</span>, <span class="bu">len</span>(df) <span class="op">-</span> HOLDOUT)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>test <span class="op">=</span> df.<span class="bu">slice</span>(<span class="bu">len</span>(df) <span class="op">-</span> HOLDOUT, HOLDOUT)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"train: </span><span class="sc">{</span><span class="bu">len</span>(train)<span class="sc">}</span><span class="ss"> points, test: </span><span class="sc">{</span><span class="bu">len</span>(test)<span class="sc">}</span><span class="ss"> points"</span>)</span></code></pre></div>
 <h2 data-number="10.3" id="a-naive-baseline"><span class="header-section-number">10.3</span> A naive baseline</h2>
 <ul>
 <li>The simplest forecast repeats the last known value for every future point.</li>
 <li>It is nearly always wrong, but it gives a floor: a real model should beat it, or the model is not earning its keep.</li>
 </ul>
-<div class="sourceCode" id="cb4" data-include="forecasting.py" data-snippet="baseline"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb4" data-file="forecasting/forecasting.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> naive_forecast(train, horizon):</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    last_value <span class="op">=</span> train[<span class="st">"level"</span>][<span class="op">-</span><span class="dv">1</span>]</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> [last_value] <span class="op">*</span> horizon</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>naive_pred <span class="op">=</span> naive_forecast(train, HOLDOUT)</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(naive_pred[:<span class="dv">4</span>])</span></code></pre></div>
 <h2 data-number="10.4" id="a-trend-and-seasonal-model"><span class="header-section-number">10.4</span> A trend and seasonal model</h2>
 <ul>
 <li>A slightly smarter model fits a straight line through the series to capture the trend.</li>
 <li>The slope is the average change per month, estimated by least squares; the intercept is where that line starts.</li>
 </ul>
-<div class="sourceCode" id="cb5" data-include="forecasting.py" data-snippet="trend"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb5" data-file="forecasting/forecasting.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> fit_trend(t, y):</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    t_mean <span class="op">=</span> <span class="bu">sum</span>(t) <span class="op">/</span> <span class="bu">len</span>(t)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    y_mean <span class="op">=</span> <span class="bu">sum</span>(y) <span class="op">/</span> <span class="bu">len</span>(y)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    num <span class="op">=</span> <span class="bu">sum</span>((ti <span class="op">-</span> t_mean) <span class="op">*</span> (yi <span class="op">-</span> y_mean) <span class="cf">for</span> ti, yi <span class="kw">in</span> <span class="bu">zip</span>(t, y))</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    den <span class="op">=</span> <span class="bu">sum</span>((ti <span class="op">-</span> t_mean) <span class="op">**</span> <span class="dv">2</span> <span class="cf">for</span> ti <span class="kw">in</span> t)</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    slope <span class="op">=</span> num <span class="op">/</span> den</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    intercept <span class="op">=</span> y_mean <span class="op">-</span> slope <span class="op">*</span> t_mean</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> intercept, slope</span></code></pre></div>
 <ul>
 <li>After removing the trend, what is left is the seasonal shape plus noise.</li>
 <li>Average the detrended leftovers by month: month 0 gets the mean of every January leftover, month 1 the mean of every February, and so on.</li>
 <li>Those twelve averages are the additive seasonal terms.</li>
 <li>The spread of the residuals around the fitted pattern, <code>sigma</code>, is our first estimate of the typical error.</li>
 </ul>
-<div class="sourceCode" id="cb6" data-include="forecasting.py" data-snippet="seasonal"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb6" data-file="forecasting/forecasting.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> fit_trend_seasonal(t, y, period):</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    intercept, slope <span class="op">=</span> fit_trend(t, y)</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    detrended <span class="op">=</span> [yi <span class="op">-</span> (intercept <span class="op">+</span> slope <span class="op">*</span> ti) <span class="cf">for</span> ti, yi <span class="kw">in</span> <span class="bu">zip</span>(t, y)]</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    by_month <span class="op">=</span> {m: [] <span class="cf">for</span> m <span class="kw">in</span> <span class="bu">range</span>(period)}</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> ti, d <span class="kw">in</span> <span class="bu">zip</span>(t, detrended):</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>        by_month[ti <span class="op">%</span> period].append(d)</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    seasonal <span class="op">=</span> {m: <span class="bu">sum</span>(v) <span class="op">/</span> <span class="bu">len</span>(v) <span class="cf">for</span> m, v <span class="kw">in</span> by_month.items()}</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    fitted <span class="op">=</span> [intercept <span class="op">+</span> slope <span class="op">*</span> ti <span class="op">+</span> seasonal[ti <span class="op">%</span> period] <span class="cf">for</span> ti <span class="kw">in</span> t]</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    residuals <span class="op">=</span> [yi <span class="op">-</span> fi <span class="cf">for</span> yi, fi <span class="kw">in</span> <span class="bu">zip</span>(y, fitted)]</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>    sigma <span class="op">=</span> (<span class="bu">sum</span>(r <span class="op">*</span> r <span class="cf">for</span> r <span class="kw">in</span> residuals) <span class="op">/</span> <span class="bu">len</span>(residuals)) <span class="op">**</span> <span class="fl">0.5</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> intercept, slope, seasonal, sigma</span></code></pre></div>
 <ul>
 <li>Forecasting is just extending the line: for each month ahead, add the trend times that month plus that month’s seasonal term.</li>
 </ul>
-<div class="sourceCode" id="cb7" data-include="forecasting.py" data-snippet="forecast"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb7" data-file="forecasting/forecasting.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> trend_seasonal_forecast(t, y, horizon, period):</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    intercept, slope, seasonal, _ <span class="op">=</span> fit_trend_seasonal(t, y, period)</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    last_t <span class="op">=</span> t[<span class="op">-</span><span class="dv">1</span>]</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    forecast <span class="op">=</span> []</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> k <span class="kw">in</span> <span class="bu">range</span>(horizon):</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>        t_k <span class="op">=</span> last_t <span class="op">+</span> k <span class="op">+</span> <span class="dv">1</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>        forecast.append(intercept <span class="op">+</span> slope <span class="op">*</span> t_k <span class="op">+</span> seasonal[t_k <span class="op">%</span> period])</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> forecast</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>t_train <span class="op">=</span> train[<span class="st">"t"</span>].to_list()</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>y_train <span class="op">=</span> train[<span class="st">"level"</span>].to_list()</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>trend_pred <span class="op">=</span> trend_seasonal_forecast(t_train, y_train, HOLDOUT, PERIOD)</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(trend_pred[:<span class="dv">4</span>])</span></code></pre></div>
 <h2 data-number="10.5" id="measure-the-error"><span class="header-section-number">10.5</span> Measure the error</h2>
 <ul>
 <li>Mean absolute error is the average distance between the forecast and the truth, in the units of the series.</li>
 <li>We compute it on the held-out points, which the fit never saw.</li>
 </ul>
-<div class="sourceCode" id="cb8" data-include="forecasting.py" data-snippet="evaluate"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb8" data-file="forecasting/forecasting.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> mean_absolute_error(y_true, y_pred):</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="bu">sum</span>(<span class="bu">abs</span>(a <span class="op">-</span> b) <span class="cf">for</span> a, b <span class="kw">in</span> <span class="bu">zip</span>(y_true, y_pred)) <span class="op">/</span> <span class="bu">len</span>(y_true)</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>y_test <span class="op">=</span> test[<span class="st">"level"</span>].to_list()</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>naive_mae <span class="op">=</span> mean_absolute_error(y_test, naive_pred)</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>trend_mae <span class="op">=</span> mean_absolute_error(y_test, trend_pred)</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"naive MAE:          </span><span class="sc">{</span>naive_mae<span class="sc">:.3f}</span><span class="ss"> m"</span>)</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"trend+seasonal MAE: </span><span class="sc">{</span>trend_mae<span class="sc">:.3f}</span><span class="ss"> m"</span>)</span></code></pre></div>
 <ul>
 <li>The trend and seasonal model should beat the naive baseline, because it captures the yearly rise and fall that the naive forecast ignores.</li>
 <li>Beating the naive floor is the minimum bar; it does not mean the forecast is good.</li>
@@ -104,7 +165,17 @@
 <li>Altair draws the actual held-out points and both forecasts on the same axes.</li>
 <li>The closer a forecast line sits to the actual line, the smaller its error.</li>
 </ul>
-<div class="sourceCode" id="cb9" data-include="forecasting.py" data-snippet="plot"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb9" data-file="forecasting/forecasting.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>plot_df <span class="op">=</span> pl.DataFrame({</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"t"</span>: test[<span class="st">"t"</span>].to_list() <span class="op">*</span> <span class="dv">3</span>,</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">"level"</span>: y_test <span class="op">+</span> naive_pred <span class="op">+</span> trend_pred,</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">"series"</span>: [<span class="st">"actual"</span>] <span class="op">*</span> HOLDOUT <span class="op">+</span> [<span class="st">"naive"</span>] <span class="op">*</span> HOLDOUT <span class="op">+</span> [<span class="st">"trend+seasonal"</span>] <span class="op">*</span> HOLDOUT,</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>chart <span class="op">=</span> alt.Chart(plot_df).mark_line().encode(</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>    x<span class="op">=</span>alt.X(<span class="st">"t:Q"</span>, title<span class="op">=</span><span class="st">"month"</span>),</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>    y<span class="op">=</span>alt.Y(<span class="st">"level:Q"</span>, title<span class="op">=</span><span class="st">"river level (m)"</span>),</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>    color<span class="op">=</span>alt.Color(<span class="st">"series:N"</span>, title<span class="op">=</span><span class="va">None</span>),</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>chart.save(<span class="st">"forecast.json"</span>)</span></code></pre></div>
 <ul>
 <li>The naive line is flat, so it misses the seasonal curve entirely.</li>
 <li>The trend+seasonal line bends with the season, so it tracks the actual values much more closely.</li>
@@ -115,7 +186,9 @@
 <li><code>sigma</code> from the training fit is a first estimate of the typical error.</li>
 <li>A rough interval is the forecast plus or minus two sigma: about 95% of values should land inside if the errors are normal and independent.</li>
 </ul>
-<div class="sourceCode" id="cb10" data-include="forecasting.py" data-snippet="uncertainty"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb10" data-file="forecasting/forecasting.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>intercept, slope, seasonal, sigma <span class="op">=</span> fit_trend_seasonal(t_train, y_train, PERIOD)</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"residual sigma: </span><span class="sc">{</span>sigma<span class="sc">:.3f}</span><span class="ss"> m"</span>)</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"first forecast, +/- 2 sigma: </span><span class="sc">{</span>trend_pred[<span class="dv">0</span>]<span class="sc">:.3f}</span><span class="ss"> m +/- </span><span class="sc">{</span><span class="dv">2</span> <span class="op">*</span> sigma<span class="sc">:.3f}</span><span class="ss"> m"</span>)</span></code></pre></div>
 <ul>
 <li><p>The interval widens as we forecast further ahead, because each step adds new uncertainty.</p></li>
 <li><p>For the naive model the error accumulates like a random walk, so its interval grows with the square root of the horizon.</p></li>

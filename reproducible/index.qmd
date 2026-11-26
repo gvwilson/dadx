@@ -6,8 +6,7 @@
 -   We describe the graph in a file named `dodo.py`, with one function per step.
 -   Whatever your running example, `data/*.csv` stands in for its raw tables and `report.html` for its final summary.
 
-```{.python include="reproducible.py" snippet="dodo"}
-```
+{{< inc reproducible/reproducible.py mark=dodo >}}
 
 -   `targets` names the files a task produces.
 -   `file_dep` names the files a task needs to read; `data/*.csv` is a glob that matches every CSV.

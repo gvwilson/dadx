@@ -63,7 +63,30 @@
 <li>The hidden truth is <code>response = 5 + 3*severity + 0.4*distance + noise</code>.</li>
 <li>If the fit recovers numbers near 5, 3, and 0.4, we know it works.</li>
 </ul>
-<div class="sourceCode" id="cb1" data-include="regression.py" data-snippet="generate"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb1" data-file="regression/regression.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> math</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> random</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> polars <span class="im">as</span> pl</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>random.seed(<span class="dv">1234</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>n <span class="op">=</span> <span class="dv">200</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>intercept <span class="op">=</span> <span class="fl">5.0</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>slope_severity <span class="op">=</span> <span class="fl">3.0</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>slope_distance <span class="op">=</span> <span class="fl">0.4</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>severities <span class="op">=</span> []</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>distances <span class="op">=</span> []</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>response_times <span class="op">=</span> []</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(n):</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    severity <span class="op">=</span> random.randint(<span class="dv">1</span>, <span class="dv">5</span>)</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    distance <span class="op">=</span> random.uniform(<span class="fl">0.5</span>, <span class="fl">20.0</span>)</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    noise <span class="op">=</span> random.gauss(<span class="fl">0.0</span>, <span class="fl">4.0</span>)</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    severities.append(severity)</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    distances.append(distance)</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    response_times.append(intercept <span class="op">+</span> slope_severity <span class="op">*</span> severity <span class="op">+</span> slope_distance <span class="op">*</span> distance <span class="op">+</span> noise)</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pl.DataFrame({</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    <span class="st">"severity"</span>: severities,</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    <span class="st">"distance_km"</span>: distances,</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    <span class="st">"response_min"</span>: response_times,</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(data.head())</span></code></pre></div>
 <h2 data-number="11.3" id="the-normal-equations"><span class="header-section-number">11.3</span> The Normal Equations</h2>
 <ul>
 <li>Least squares chooses the coefficients that minimize the sum of squared residuals.</li>
@@ -74,7 +97,47 @@
 <li>We build <code>X'X</code> and <code>X'y</code> with plain loops, then solve by Gaussian elimination.</li>
 <li>No NumPy: this is the whole idea, written out where we can see it.</li>
 </ul>
-<div class="sourceCode" id="cb2" data-include="regression.py" data-snippet="normal_equations"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb2" data-file="regression/regression.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> solve_linear(a, b):</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""Solve a x = b by Gaussian elimination with partial pivoting."""</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    n <span class="op">=</span> <span class="bu">len</span>(b)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    m <span class="op">=</span> [row[:] <span class="op">+</span> [b[i]] <span class="cf">for</span> i, row <span class="kw">in</span> <span class="bu">enumerate</span>(a)]</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> col <span class="kw">in</span> <span class="bu">range</span>(n):</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>        pivot <span class="op">=</span> col</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        best <span class="op">=</span> <span class="bu">abs</span>(m[col][col])</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> r <span class="kw">in</span> <span class="bu">range</span>(col <span class="op">+</span> <span class="dv">1</span>, n):</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> <span class="bu">abs</span>(m[r][col]) <span class="op">&gt;</span> best:</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>                best <span class="op">=</span> <span class="bu">abs</span>(m[r][col])</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>                pivot <span class="op">=</span> r</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> best <span class="op">&lt;</span> <span class="fl">1e-12</span>:</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>            <span class="cf">raise</span> <span class="pp">ValueError</span>(<span class="st">"singular matrix"</span>)</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>        m[col], m[pivot] <span class="op">=</span> m[pivot], m[col]</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> r <span class="kw">in</span> <span class="bu">range</span>(col <span class="op">+</span> <span class="dv">1</span>, n):</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>            factor <span class="op">=</span> m[r][col] <span class="op">/</span> m[col][col]</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> c <span class="kw">in</span> <span class="bu">range</span>(col, n <span class="op">+</span> <span class="dv">1</span>):</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>                m[r][c] <span class="op">-=</span> factor <span class="op">*</span> m[col][c]</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    x <span class="op">=</span> [<span class="fl">0.0</span>] <span class="op">*</span> n</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> r <span class="kw">in</span> <span class="bu">range</span>(n <span class="op">-</span> <span class="dv">1</span>, <span class="op">-</span><span class="dv">1</span>, <span class="op">-</span><span class="dv">1</span>):</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>        total <span class="op">=</span> m[r][n]</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> c <span class="kw">in</span> <span class="bu">range</span>(r <span class="op">+</span> <span class="dv">1</span>, n):</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>            total <span class="op">-=</span> m[r][c] <span class="op">*</span> x[c]</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>        x[r] <span class="op">=</span> total <span class="op">/</span> m[r][r]</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> x</span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> fit_least_squares(X, y):</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""Return the coefficients w that minimize the squared residuals."""</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>    n <span class="op">=</span> <span class="bu">len</span>(X)</span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>    p <span class="op">=</span> <span class="bu">len</span>(X[<span class="dv">0</span>])</span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>    xtx <span class="op">=</span> [[<span class="fl">0.0</span>] <span class="op">*</span> p <span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(p)]</span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>    xty <span class="op">=</span> [<span class="fl">0.0</span>] <span class="op">*</span> p</span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(n):</span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>        row <span class="op">=</span> X[i]</span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> j <span class="kw">in</span> <span class="bu">range</span>(p):</span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a>            xty[j] <span class="op">+=</span> row[j] <span class="op">*</span> y[i]</span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> k <span class="kw">in</span> <span class="bu">range</span>(p):</span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a>                xtx[j][k] <span class="op">+=</span> row[j] <span class="op">*</span> row[k]</span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> solve_linear(xtx, xty)</span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> predict(X, w):</span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""Return the fitted value for each row: its dot product with w."""</span></span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> [<span class="bu">sum</span>(row[j] <span class="op">*</span> w[j] <span class="cf">for</span> j <span class="kw">in</span> <span class="bu">range</span>(<span class="bu">len</span>(w))) <span class="cf">for</span> row <span class="kw">in</span> X]</span></code></pre></div>
 <h2 data-number="11.4" id="fit-and-interpret"><span class="header-section-number">11.4</span> Fit and Interpret</h2>
 <ul>
 <li>The design matrix <code>X</code> has one column per coefficient: ones, severity, distance.</li>
@@ -84,7 +147,11 @@
 <li>The distance slope means one more kilometre adds about 0.4 minutes.</li>
 <li>These meanings hold only because the relationship really is linear here.</li>
 </ul>
-<div class="sourceCode" id="cb3" data-include="regression.py" data-snippet="fit"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb3" data-file="regression/regression.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>X <span class="op">=</span> [[<span class="fl">1.0</span>, <span class="bu">float</span>(s), d] <span class="cf">for</span> s, d <span class="kw">in</span> <span class="bu">zip</span>(severities, distances)]</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>y <span class="op">=</span> <span class="bu">list</span>(response_times)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>w <span class="op">=</span> fit_least_squares(X, y)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"coefficients (intercept, severity, distance):"</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(w)</span></code></pre></div>
 <h2 data-number="11.5" id="look-at-the-residuals"><span class="header-section-number">11.5</span> Look at the Residuals</h2>
 <ul>
 <li>Residuals are the part of the outcome the model did not explain.</li>
@@ -93,7 +160,10 @@
 <li>A pattern in residuals, like growing with severity, means the model missed structure.</li>
 <li>With synthetic noise the residuals should look random, which is the honest case.</li>
 </ul>
-<div class="sourceCode" id="cb4" data-include="regression.py" data-snippet="residuals"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb4" data-file="regression/regression.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>y_pred <span class="op">=</span> predict(X, w)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>residuals <span class="op">=</span> [y[i] <span class="op">-</span> y_pred[i] <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(n)]</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"mean residual:"</span>, <span class="bu">sum</span>(residuals) <span class="op">/</span> <span class="bu">len</span>(residuals))</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"residual range:"</span>, <span class="bu">min</span>(residuals), <span class="st">"to"</span>, <span class="bu">max</span>(residuals))</span></code></pre></div>
 <h2 data-number="11.6" id="evaluate-on-held-out-data"><span class="header-section-number">11.6</span> Evaluate on Held-Out Data</h2>
 <ul>
 <li>A model that fits the data it saw can still fail on new incidents.</li>
@@ -103,7 +173,22 @@
 <li>Mean absolute error is the average size of the prediction error, in minutes.</li>
 <li>Training and test MAE should be close; a big gap is a warning sign.</li>
 </ul>
-<div class="sourceCode" id="cb5" data-include="regression.py" data-snippet="evaluate"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb5" data-file="regression/regression.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> mean_absolute_error(y_true, y_pred):</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""Average absolute difference between true and predicted values."""</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="bu">sum</span>(<span class="bu">abs</span>(t <span class="op">-</span> p) <span class="cf">for</span> t, p <span class="kw">in</span> <span class="bu">zip</span>(y_true, y_pred)) <span class="op">/</span> <span class="bu">len</span>(y_true)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>random.seed(<span class="dv">99</span>)</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>idx <span class="op">=</span> <span class="bu">list</span>(<span class="bu">range</span>(n))</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>random.shuffle(idx)</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>split <span class="op">=</span> <span class="bu">int</span>(<span class="fl">0.8</span> <span class="op">*</span> n)</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>X_train <span class="op">=</span> [X[i] <span class="cf">for</span> i <span class="kw">in</span> idx[:split]]</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>y_train <span class="op">=</span> [y[i] <span class="cf">for</span> i <span class="kw">in</span> idx[:split]]</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>X_test <span class="op">=</span> [X[i] <span class="cf">for</span> i <span class="kw">in</span> idx[split:]]</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>y_test <span class="op">=</span> [y[i] <span class="cf">for</span> i <span class="kw">in</span> idx[split:]]</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>w_train <span class="op">=</span> fit_least_squares(X_train, y_train)</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>y_train_pred <span class="op">=</span> predict(X_train, w_train)</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>y_test_pred <span class="op">=</span> predict(X_test, w_train)</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"training MAE:"</span>, mean_absolute_error(y_train, y_train_pred))</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"test MAE:"</span>, mean_absolute_error(y_test, y_test_pred))</span></code></pre></div>
 <h2 data-number="11.7" id="plot-actual-vs-predicted"><span class="header-section-number">11.7</span> Plot Actual vs Predicted</h2>
 <ul>
 <li>A plot shows what a single error number hides.</li>
@@ -113,7 +198,29 @@
 <li>A tight cloud around the diagonal means the model explains most of the variation.</li>
 <li>A cloud that fans out means the error grows in one direction.</li>
 </ul>
-<div class="sourceCode" id="cb6" data-include="regression.py" data-snippet="plot"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb6" data-file="regression/regression.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> altair <span class="im">as</span> alt</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>results <span class="op">=</span> pl.DataFrame({</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">"actual"</span>: y_test,</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">"predicted"</span>: y_test_pred,</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>lo <span class="op">=</span> <span class="bu">min</span>(<span class="bu">min</span>(y_test), <span class="bu">min</span>(y_test_pred))</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>hi <span class="op">=</span> <span class="bu">max</span>(<span class="bu">max</span>(y_test), <span class="bu">max</span>(y_test_pred))</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>diag <span class="op">=</span> pl.DataFrame({<span class="st">"v"</span>: [lo, hi]})</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>reference <span class="op">=</span> alt.Chart(diag).mark_line(color<span class="op">=</span><span class="st">"grey"</span>, strokeDash<span class="op">=</span>[<span class="dv">4</span>, <span class="dv">4</span>]).encode(</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>    x<span class="op">=</span><span class="st">"v"</span>,</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>    y<span class="op">=</span><span class="st">"v"</span>,</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>points <span class="op">=</span> alt.Chart(results).mark_circle().encode(</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>    x<span class="op">=</span>alt.X(<span class="st">"actual"</span>, title<span class="op">=</span><span class="st">"Actual response time (minutes)"</span>),</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>    y<span class="op">=</span>alt.Y(<span class="st">"predicted"</span>, title<span class="op">=</span><span class="st">"Predicted response time (minutes)"</span>),</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>    tooltip<span class="op">=</span>[<span class="st">"actual"</span>, <span class="st">"predicted"</span>],</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>chart <span class="op">=</span> (reference <span class="op">+</span> points).properties(</span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>    width<span class="op">=</span><span class="dv">400</span>,</span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>    height<span class="op">=</span><span class="dv">400</span>,</span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">"Actual vs predicted on held-out incidents"</span>,</span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>chart.save(<span class="st">"regression.json"</span>)</span></code></pre></div>
 <h2 data-number="11.8" id="summary"><span class="header-section-number">11.8</span> Summary</h2>
 <ul>
 <li>Least squares picks the line that minimizes the sum of squared residuals.</li>

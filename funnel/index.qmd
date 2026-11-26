@@ -14,8 +14,7 @@ of analysis: funnel and conversion analysis.
 
 Start with the tools and the fixed stage order.
 
-```{.python include="funnel.py" snippet="setup"}
-```
+{{< inc funnel/funnel.py mark=setup >}}
 
 -   A seed makes the pseudo-random sequence reproducible, so this lesson runs the
     same every time and the numbers below can be checked against the output.
@@ -23,8 +22,7 @@ Start with the tools and the fixed stage order.
     stages progressively fewer, walk each incident forward and let a fixed
     fraction fall off at each step.
 
-```{.python include="funnel.py" snippet="generate"}
-```
+{{< inc funnel/funnel.py mark=generate >}}
 
 -   Grouping by status and counting gives a histogram of final states, not a
     funnel. A funnel counts every record that reached a stage, and a record that
@@ -32,8 +30,7 @@ Start with the tools and the fixed stage order.
 -   Give each stage an integer position, then count how many records reached a
     stage by summing the final-status counts from that stage onward.
 
-```{.python include="funnel.py" snippet="counts"}
-```
+{{< inc funnel/funnel.py mark=counts >}}
 
 -   `cum_sum(reverse=True)` adds the counts from the last stage back to the
     first, so `reached` at `reported` is all incidents and `reached` at `resolved`
@@ -41,15 +38,13 @@ Start with the tools and the fixed stage order.
 -   Conversion is the share that moved from one stage to the next; drop-off is
     the share that did not. They add up to one.
 
-```{.python include="funnel.py" snippet="conversion"}
-```
+{{< inc funnel/funnel.py mark=conversion >}}
 
 -   The last stage has no next stage, so its conversion and drop-off are null.
 -   Plot the funnel as bars ordered by stage, with the reached count labeled on
     each bar.
 
-```{.python include="funnel.py" snippet="plot"}
-```
+{{< inc funnel/funnel.py mark=plot >}}
 
 -   The funnel shows the biggest drop-off is between dispatch and resolution
     (about 40%), then between triage and dispatch (about a third), so those are

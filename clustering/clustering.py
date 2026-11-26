@@ -1,4 +1,4 @@
-# start snippet imports
+# mccole:imports
 import math
 import random
 
@@ -6,9 +6,9 @@ import altair as alt
 import polars as pl
 
 SEED = 20261108
-# end snippet imports
+# mccole:/imports
 
-# start snippet generate
+# mccole:generate
 GROUPS = {
     "storm":        {"code": 0, "severity": 3.0, "spread": 0.5, "n": 60},
     "power-outage": {"code": 1, "severity": 4.5, "spread": 0.5, "n": 50},
@@ -30,9 +30,9 @@ def make_incidents(groups):
 
 incidents = make_incidents(GROUPS)
 print(incidents.head())
-# end snippet generate
+# mccole:/generate
 
-# start snippet plot_before
+# mccole:plot_before
 chart = alt.Chart(incidents).mark_circle(opacity=0.6).encode(
     x=alt.X("kind_code:Q", title="kind (numeric code)"),
     y=alt.Y("severity:Q", title="severity"),
@@ -40,21 +40,21 @@ chart = alt.Chart(incidents).mark_circle(opacity=0.6).encode(
     tooltip=["kind", "severity"],
 ).properties(width=500, height=300, title="Incidents before clustering")
 chart.save("clusters-before.json")
-# end snippet plot_before
+# mccole:/plot_before
 
-# start snippet distance
+# mccole:distance
 def distance(a, b):
     return math.dist(a, b)
-# end snippet distance
+# mccole:/distance
 
-# start snippet initialize
+# mccole:initialize
 def initialize(points, k, seed=SEED):
     rng = random.Random(seed)
     idxs = rng.sample(range(len(points)), k)
     return [points[i] for i in idxs]
-# end snippet initialize
+# mccole:/initialize
 
-# start snippet assign
+# mccole:assign
 def assign(points, centroids):
     labels = []
     for p in points:
@@ -75,9 +75,9 @@ def recenter(points, labels, k):
         )
         centroids.append(mean)
     return centroids
-# end snippet assign
+# mccole:/assign
 
-# start snippet kmeans
+# mccole:kmeans
 def kmeans(points, k, seed=SEED, max_iter=100):
     centroids = initialize(points, k, seed)
     labels = None
@@ -88,9 +88,9 @@ def kmeans(points, k, seed=SEED, max_iter=100):
         labels = new_labels
         centroids = recenter(points, labels, k)
     return labels, centroids
-# end snippet kmeans
+# mccole:/kmeans
 
-# start snippet cluster
+# mccole:cluster
 points = list(zip(incidents["kind_code"], incidents["severity"]))
 
 K = 4
@@ -98,9 +98,9 @@ labels, centroids = kmeans(points, K)
 
 incidents = incidents.with_columns(pl.Series("cluster", labels))
 print(incidents.head())
-# end snippet cluster
+# mccole:/cluster
 
-# start snippet plot_clusters
+# mccole:plot_clusters
 chart = alt.Chart(incidents).mark_circle(opacity=0.6).encode(
     x=alt.X("kind_code:Q", title="kind (numeric code)"),
     y=alt.Y("severity:Q", title="severity"),
@@ -108,9 +108,9 @@ chart = alt.Chart(incidents).mark_circle(opacity=0.6).encode(
     tooltip=["kind", "severity", "cluster"],
 ).properties(width=500, height=300, title="Incidents clustered with k-means")
 chart.save("clusters.json")
-# end snippet plot_clusters
+# mccole:/plot_clusters
 
-# start snippet interpret
+# mccole:interpret
 for cluster in range(K):
     members = incidents.filter(pl.col("cluster") == cluster)
     counts = members["kind"].value_counts().sort("count", descending=True)
@@ -118,25 +118,25 @@ for cluster in range(K):
     avg = members["severity"].mean()
     print(f"cluster {cluster}: {len(members)} records, "
           f"mostly {top['kind']} ({top['count']}), mean severity {avg:.1f}")
-# end snippet interpret
+# mccole:/interpret
 
-# start snippet validate
+# mccole:validate
 _, other = kmeans(points, K, seed=SEED + 1)
 
 for a, b in zip(sorted(centroids), sorted(other)):
     print(f"{tuple(round(x, 2) for x in a)}  vs  {tuple(round(x, 2) for x in b)}")
-# end snippet validate
+# mccole:/validate
 
-# start snippet sum_squares
+# mccole:sum_squares
 def sum_squares(points, labels, centroids):
     total = 0.0
     for p, lab in zip(points, labels):
         c = centroids[lab]
         total += sum((p[d] - c[d]) ** 2 for d in range(len(p)))
     return total
-# end snippet sum_squares
+# mccole:/sum_squares
 
-# start snippet kmeans_best
+# mccole:kmeans_best
 def kmeans_best(points, k, starts=8, start_seed=SEED):
     best_score, best_labels, best_centroids = None, None, None
     for s in range(starts):
@@ -145,12 +145,12 @@ def kmeans_best(points, k, starts=8, start_seed=SEED):
         if best_score is None or score < best_score:
             best_score, best_labels, best_centroids = score, labels, centroids
     return best_labels, best_centroids
-# end snippet kmeans_best
+# mccole:/kmeans_best
 
-# start snippet validate_best
+# mccole:validate_best
 _, best_a = kmeans_best(points, K)
 _, best_b = kmeans_best(points, K, start_seed=SEED + 100)
 
 for a, b in zip(sorted(best_a), sorted(best_b)):
     print(f"{tuple(round(x, 2) for x in a)}  vs  {tuple(round(x, 2) for x in b)}")
-# end snippet validate_best
+# mccole:/validate_best

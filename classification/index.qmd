@@ -18,14 +18,12 @@ predictive modeling with a categorical outcome.
     same code runs with the columns renamed.
 -   Start by pinning the seed, then generate rows.
 
-```{.python include="classification.py" snippet="setup"}
-```
+{{< inc classification/classification.py mark=setup >}}
 
 -   `random.seed` makes the generator reproducible: the same seed gives the same
     rows every run, so a colleague can re-run and check the whole pipeline.
 
-```{.python include="classification.py" snippet="generate"}
-```
+{{< inc classification/classification.py mark=generate >}}
 
 -   `escalated` is the label we will predict: 1 means the incident escalates, 0
     means it does not.
@@ -34,8 +32,7 @@ predictive modeling with a categorical outcome.
     find.
 -   The label is imbalanced: most incidents do not escalate.
 
-```{.python include="classification.py" snippet="rate"}
-```
+{{< inc classification/classification.py mark=rate >}}
 
 ## Split and fit
 
@@ -44,24 +41,21 @@ predictive modeling with a categorical outcome.
 -   The rows are already in random order, so the first 80% and last 20% form a
     fair split.
 
-```{.python include="classification.py" snippet="split"}
-```
+{{< inc classification/classification.py mark=split >}}
 
 -   Our classifier is a threshold rule: predict escalation when severity is at
     least some cutoff.
 -   It is crude but transparent, and a real pipeline often starts with a simple
     rule before reaching for something fancier.
 
-```{.python include="classification.py" snippet="predict"}
-```
+{{< inc classification/classification.py mark=predict >}}
 
 -   To fit the rule, try each cutoff on the training data and keep the one that
     best balances precision and recall.
 -   First we need to count the four kinds of outcomes, and turn those counts
     into scores.
 
-```{.python include="classification.py" snippet="confusion"}
-```
+{{< inc classification/classification.py mark=confusion >}}
 
 -   A true positive is an escalation we caught; a true negative is a
     non-escalation we correctly ignored.
@@ -71,23 +65,20 @@ predictive modeling with a categorical outcome.
     fraction of real escalations we caught.
 -   F1 is their harmonic mean, a single number that rewards both at once.
 
-```{.python include="classification.py" snippet="fit_threshold"}
-```
+{{< inc classification/classification.py mark=fit_threshold >}}
 
 ## Predict and evaluate
 
 -   Apply the chosen threshold to the test data, which the fit never saw.
 
-```{.python include="classification.py" snippet="evaluate"}
-```
+{{< inc classification/classification.py mark=evaluate >}}
 
 -   The matrix has four cells: true negatives top left, false positives top
     right, false negatives bottom left, true positives bottom right.
 -   The diagonal is correct answers; the off-diagonal is two different kinds of
     mistake.
 
-```{.python include="classification.py" snippet="metrics"}
-```
+{{< inc classification/classification.py mark=metrics >}}
 
 ## Why accuracy alone misleads
 
@@ -96,8 +87,7 @@ predictive modeling with a categorical outcome.
 -   A classifier that always says "no escalation" gets every non-escalation
     right and only misses the rare escalations.
 
-```{.python include="classification.py" snippet="baseline"}
-```
+{{< inc classification/classification.py mark=baseline >}}
 
 -   With about a third of incidents escalating, "always no" is right roughly
     two times in three, yet it catches none of the escalations.

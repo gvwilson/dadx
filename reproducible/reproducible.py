@@ -1,4 +1,4 @@
-# start snippet dodo
+# mccole:dodo
 def task_make_data():
     """Generate the raw CSV files."""
     return {
@@ -13,4 +13,4 @@ def task_report():
         "targets": ["report.html"],
         "actions": ["python bin/script.py"],
     }
-# end snippet dodo
+# mccole:/dodo

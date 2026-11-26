@@ -1,4 +1,4 @@
-# start snippet imports
+# mccole:imports
 import math
 import random
 
@@ -6,9 +6,9 @@ import polars as pl
 
 SEED = 20261108
 random.seed(SEED)
-# end snippet imports
+# mccole:/imports
 
-# start snippet generate
+# mccole:generate
 def make_incidents(n):
     rows = []
     for i in range(1, n + 1):
@@ -22,20 +22,20 @@ def make_incidents(n):
 
 incidents = make_incidents(12)
 print(incidents)
-# end snippet generate
+# mccole:/generate
 
-# start snippet distance
+# mccole:distance
 def euclidean(a, b):
     return math.dist(a, b)
-# end snippet distance
+# mccole:/distance
 
-# start snippet minmax
+# mccole:minmax
 features = ["severity", "latitude", "longitude"]
 print("minimums:", incidents.select(features).min().to_dicts()[0])
 print("maximums:", incidents.select(features).max().to_dicts()[0])
-# end snippet minmax
+# mccole:/minmax
 
-# start snippet scale
+# mccole:scale
 def zscore(col):
     return (col - col.mean()) / col.std()
 
@@ -43,9 +43,9 @@ scaled = incidents.with_columns([
     zscore(pl.col(f)).alias(f"{f}_z") for f in features
 ])
 print(scaled.head(3))
-# end snippet scale
+# mccole:/scale
 
-# start snippet nearest_neighbors
+# mccole:nearest_neighbors
 zcols = [f"{f}_z" for f in features]
 query = scaled.row(0, named=True)
 q = tuple(query[c] for c in zcols)
@@ -63,9 +63,9 @@ nearest = (
     .head(k)
 )
 print(nearest.select(["id", "severity", "latitude", "longitude", "distance"]))
-# end snippet nearest_neighbors
+# mccole:/nearest_neighbors
 
-# start snippet raw_comparison
+# mccole:raw_comparison
 q_raw = tuple(query[c] for c in features)
 raw_dists = [
     euclidean(q_raw, tuple(row[c] for c in features))
@@ -79,4 +79,4 @@ raw_nearest = (
     .head(k)
 )
 print(raw_nearest.select(["id", "severity", "raw_distance"]))
-# end snippet raw_comparison
+# mccole:/raw_comparison

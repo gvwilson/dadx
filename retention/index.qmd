@@ -9,69 +9,58 @@
 -   The defining event is a choice. Here it is a volunteer's first response,
     not their sign-up month, because signing up is not the same as showing up.
 
-```{.python include="retention.py" snippet="import"}
-```
+{{< inc retention/retention.py mark=import >}}
 
 -   Start with two helpers that move between `"YYYY-MM"` labels and integer
     month numbers. An integer makes "months since first response" a subtraction.
 
-```{.python include="retention.py" snippet="helpers"}
-```
+{{< inc retention/retention.py mark=helpers >}}
 
 -   Generate the two tables with a fixed seed so the lesson is reproducible.
     A volunteer has a `joined` sign-up month; an incident records one response
     at a `timestamp`.
 
-```{.python include="retention.py" snippet="generate"}
-```
+{{< inc retention/retention.py mark=generate >}}
 
 -   `joined` records when a volunteer signed up and can precede their first
     response, which is why the cohort is derived from the incident log instead
     of trusted from `joined`.
 
-```{.python include="retention.py" snippet="tables"}
-```
+{{< inc retention/retention.py mark=tables >}}
 
 -   Convert each response's timestamp to an integer month so later arithmetic is
     a plain column difference.
 
-```{.python include="retention.py" snippet="month_index"}
-```
+{{< inc retention/retention.py mark=month_index >}}
 
 -   Join each response to its volunteer to carry along the name, role, and
     sign-up month. Then take each volunteer's earliest response month: that is
     their cohort.
 
-```{.python include="retention.py" snippet="join"}
-```
+{{< inc retention/retention.py mark=join >}}
 
 -   The cohort assignment is computed from the same records it is then joined
     back onto, which is why this is a self-join. `period` is months since a
     volunteer's first response: zero means "their first month".
 
-```{.python include="retention.py" snippet="active"}
-```
+{{< inc retention/retention.py mark=active >}}
 
 -   Group by cohort and period and count distinct volunteers active in each
     cell. Rows are cohorts, columns are periods.
 
-```{.python include="retention.py" snippet="retention"}
-```
+{{< inc retention/retention.py mark=retention >}}
 
 -   Check against a property that must hold: a cohort's period-0 count equals
     its size, because every member responded in their first month.
 
-```{.python include="retention.py" snippet="check"}
-```
+{{< inc retention/retention.py mark=check >}}
 
 -   Counts answer "how many?". Dividing each cell by its cohort size answers
     "what fraction?", which is a retention rate.
 
-```{.python include="retention.py" snippet="rate"}
-```
+{{< inc retention/retention.py mark=rate >}}
 
 -   Plot the matrix as a heatmap. Reading down a column shows one cohort aging;
     reading across a row shows the same period for different cohorts.
 
-```{.python include="retention.py" snippet="plot"}
-```
+{{< inc retention/retention.py mark=plot >}}

@@ -1,4 +1,4 @@
-# start snippet setup
+# mccole:setup
 import random
 from datetime import datetime, timedelta
 
@@ -10,9 +10,9 @@ KINDS = ["storm", "flood", "power-outage", "fire"]
 STATUSES = ["reported", "assigned", "resolved"]
 SEVERITIES = ["low", "medium", "high"]
 LAT_RANGE = (40.0, 42.0)
-# end snippet setup
+# mccole:/setup
 
-# start snippet generate
+# mccole:generate
 def random_timestamp():
     start = datetime(2024, 6, 1, 0, 0, 0)
     return start + timedelta(minutes=random.randint(0, 7 * 24 * 60))
@@ -29,9 +29,9 @@ for i in range(40):
         "status": random.choice(STATUSES),
         "responder_id": random.randint(100, 199),
     })
-# end snippet generate
+# mccole:/generate
 
-# start snippet inject_dirt
+# mccole:inject_dirt
 rows[5]["kind"] = "Flood"       # wrong capitalization
 rows[7]["kind"] = "flooding"    # synonym, not a controlled label
 rows[12]["status"] = "Resolved" # wrong capitalization
@@ -49,9 +49,9 @@ rows.append(reentered)
 
 raw = pl.DataFrame(rows)
 print(raw.head())
-# end snippet inject_dirt
+# mccole:/inject_dirt
 
-# start snippet profile
+# mccole:profile
 print(raw.shape)
 
 print(raw.schema)
@@ -66,16 +66,16 @@ print(raw.select(
 print(raw.group_by("kind").agg(pl.len().alias("count")))
 
 print(raw.group_by("status").agg(pl.len().alias("count")))
-# end snippet profile
+# mccole:/profile
 
-# start snippet dedup
+# mccole:dedup
 dup_keys = ["kind", "latitude", "longitude", "timestamp"]
 n_raw = raw.height
 deduped = raw.unique(subset=dup_keys, keep="first")
 print("removed", n_raw - deduped.height, "duplicates;", deduped.height, "rows remain")
-# end snippet dedup
+# mccole:/dedup
 
-# start snippet normalize
+# mccole:normalize
 KIND_FIXES = {"flooding": "flood"}
 STATUS_FIXES = {"closed": "resolved"}
 
@@ -92,13 +92,13 @@ clean = deduped.with_columns(
 
 print(clean.group_by("kind").agg(pl.len().alias("count")))
 print(clean.group_by("status").agg(pl.len().alias("count")))
-# end snippet normalize
+# mccole:/normalize
 
-# start snippet fill_missing
+# mccole:fill_missing
 clean = clean.with_columns(pl.col("severity").fill_null("unknown").alias("severity"))
-# end snippet fill_missing
+# mccole:/fill_missing
 
-# start snippet validate
+# mccole:validate
 n_before_validate = clean.height
 clean = clean.filter(
     pl.col("latitude").is_not_null()
@@ -110,9 +110,9 @@ clean = clean.filter(
 
 print("dropped", n_before_validate - clean.height, "unplaceable rows")
 print(clean.null_count())
-# end snippet validate
+# mccole:/validate
 
-# start snippet report
+# mccole:report
 report = {
     "rows": {"before": n_raw, "after": clean.height},
     "duplicates_removed": n_raw - deduped.height,
@@ -120,4 +120,4 @@ report = {
     "missing_severity_filled": raw["severity"].null_count(),
 }
 print(report)
-# end snippet report
+# mccole:/report

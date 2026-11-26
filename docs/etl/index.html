@@ -48,30 +48,71 @@
 <li>The stdlib <code>http.server</code> gives us a handler class and a threaded server.</li>
 <li>Running the server in a background thread keeps the notebook responsive.</li>
 </ul>
-<div class="sourceCode" id="cb1" data-include="etl.py" data-snippet="mock_server_imports"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb1" data-file="etl/etl.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> threading</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> http.server <span class="im">import</span> BaseHTTPRequestHandler, ThreadingHTTPServer</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> urllib.parse <span class="im">import</span> urlparse, parse_qs</span></code></pre></div>
 <ul>
 <li>The payload is six storm reports: one per event, with a severity, a position, and the time it was reported.</li>
 <li>We will serve them two pages at a time, the way a real API paginates.</li>
 </ul>
-<div class="sourceCode" id="cb2" data-include="etl.py" data-snippet="mock_data"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb2" data-file="etl/etl.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>REPORTS <span class="op">=</span> [</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    {<span class="st">"id"</span>: <span class="dv">1</span>, <span class="st">"event"</span>: <span class="st">"cyclone"</span>, <span class="st">"severity"</span>: <span class="dv">4</span>, <span class="st">"latitude"</span>: <span class="op">-</span><span class="fl">32.5</span>, <span class="st">"longitude"</span>: <span class="fl">141.2</span>, <span class="st">"reported"</span>: <span class="st">"2024-06-01T08:12:00"</span>},</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    {<span class="st">"id"</span>: <span class="dv">2</span>, <span class="st">"event"</span>: <span class="st">"flash-flood"</span>, <span class="st">"severity"</span>: <span class="dv">3</span>, <span class="st">"latitude"</span>: <span class="op">-</span><span class="fl">33.1</span>, <span class="st">"longitude"</span>: <span class="fl">142.9</span>, <span class="st">"reported"</span>: <span class="st">"2024-06-01T13:05:00"</span>},</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    {<span class="st">"id"</span>: <span class="dv">3</span>, <span class="st">"event"</span>: <span class="st">"windstorm"</span>, <span class="st">"severity"</span>: <span class="dv">2</span>, <span class="st">"latitude"</span>: <span class="op">-</span><span class="fl">31.8</span>, <span class="st">"longitude"</span>: <span class="fl">143.5</span>, <span class="st">"reported"</span>: <span class="st">"2024-06-02T09:30:00"</span>},</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    {<span class="st">"id"</span>: <span class="dv">4</span>, <span class="st">"event"</span>: <span class="st">"cyclone"</span>, <span class="st">"severity"</span>: <span class="dv">5</span>, <span class="st">"latitude"</span>: <span class="op">-</span><span class="fl">32.2</span>, <span class="st">"longitude"</span>: <span class="fl">141.8</span>, <span class="st">"reported"</span>: <span class="st">"2024-06-03T18:45:00"</span>},</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    {<span class="st">"id"</span>: <span class="dv">5</span>, <span class="st">"event"</span>: <span class="st">"hail"</span>, <span class="st">"severity"</span>: <span class="dv">1</span>, <span class="st">"latitude"</span>: <span class="op">-</span><span class="fl">34.0</span>, <span class="st">"longitude"</span>: <span class="fl">140.6</span>, <span class="st">"reported"</span>: <span class="st">"2024-06-04T11:20:00"</span>},</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    {<span class="st">"id"</span>: <span class="dv">6</span>, <span class="st">"event"</span>: <span class="st">"flash-flood"</span>, <span class="st">"severity"</span>: <span class="dv">2</span>, <span class="st">"latitude"</span>: <span class="op">-</span><span class="fl">32.9</span>, <span class="st">"longitude"</span>: <span class="fl">142.1</span>, <span class="st">"reported"</span>: <span class="st">"2024-06-05T07:55:00"</span>},</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>]</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>PAGE_SIZE <span class="op">=</span> <span class="dv">3</span></span></code></pre></div>
 <ul>
 <li>The handler answers <code>GET /reports?page=N</code> with one page of JSON.</li>
 <li>The <code>next</code> field is the following page number, or <code>null</code> on the last page, so a client can follow the chain without knowing the total in advance.</li>
 <li><code>log_message</code> is silenced so the request log does not clutter the output.</li>
 </ul>
-<div class="sourceCode" id="cb3" data-include="etl.py" data-snippet="storm_handler"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb3" data-file="etl/etl.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> StormHandler(BaseHTTPRequestHandler):</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> do_GET(<span class="va">self</span>):</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>        parsed <span class="op">=</span> urlparse(<span class="va">self</span>.path)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>        query <span class="op">=</span> parse_qs(parsed.query)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        page <span class="op">=</span> <span class="bu">int</span>(query.get(<span class="st">"page"</span>, [<span class="st">"1"</span>])[<span class="dv">0</span>])</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>        start <span class="op">=</span> (page <span class="op">-</span> <span class="dv">1</span>) <span class="op">*</span> PAGE_SIZE</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        items <span class="op">=</span> REPORTS[start : start <span class="op">+</span> PAGE_SIZE]</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        next_page <span class="op">=</span> page <span class="op">+</span> <span class="dv">1</span> <span class="cf">if</span> start <span class="op">+</span> PAGE_SIZE <span class="op">&lt;</span> <span class="bu">len</span>(REPORTS) <span class="cf">else</span> <span class="va">None</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        body <span class="op">=</span> json.dumps({<span class="st">"page"</span>: page, <span class="st">"next"</span>: next_page, <span class="st">"items"</span>: items}).encode()</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.send_response(<span class="dv">200</span>)</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.send_header(<span class="st">"Content-Type"</span>, <span class="st">"application/json"</span>)</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.send_header(<span class="st">"Content-Length"</span>, <span class="bu">str</span>(<span class="bu">len</span>(body)))</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.end_headers()</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.wfile.write(body)</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> log_message(<span class="va">self</span>, <span class="op">*</span>args):</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>        <span class="cf">pass</span></span></code></pre></div>
 <ul>
 <li>Bind to port 0 to let the operating system pick a free port, then read the port back from the socket.</li>
 <li>The server runs in a daemon thread, so it stops when the process exits.</li>
 </ul>
-<div class="sourceCode" id="cb4" data-include="etl.py" data-snippet="start_server"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb4" data-file="etl/etl.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>server <span class="op">=</span> ThreadingHTTPServer((<span class="st">"127.0.0.1"</span>, <span class="dv">0</span>), StormHandler)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>port <span class="op">=</span> server.server_address[<span class="dv">1</span>]</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>threading.Thread(target<span class="op">=</span>server.serve_forever, daemon<span class="op">=</span><span class="va">True</span>).start()</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>BASE_URL <span class="op">=</span> <span class="ss">f"http://127.0.0.1:</span><span class="sc">{</span>port<span class="sc">}</span><span class="ss">"</span></span></code></pre></div>
 <h2 data-number="16.2" id="fetch-with-a-cache"><span class="header-section-number">16.2</span> Fetch with a cache</h2>
 <ul>
 <li><code>httpx.get</code> is the workhorse: it makes the request and returns a response whose <code>.json()</code> parses the body.</li>
 <li><code>raise_for_status</code> turns a failed request (a 404 or 500) into an exception instead of letting bad data flow silently onward.</li>
 <li>A <code>dict</code> keyed by URL is a tiny cache: a re-run returns the stored value and never touches the network.</li>
 </ul>
-<div class="sourceCode" id="cb5" data-include="etl.py" data-snippet="fetch_with_cache"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb5" data-file="etl/etl.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> httpx</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>cache <span class="op">=</span> {}</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>fetch_count <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> fetch(url):</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">global</span> fetch_count</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> url <span class="kw">in</span> cache:</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> cache[url]</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    fetch_count <span class="op">+=</span> <span class="dv">1</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    response <span class="op">=</span> httpx.get(url)</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    response.raise_for_status()</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    data <span class="op">=</span> response.json()</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>    cache[url] <span class="op">=</span> data</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> data</span></code></pre></div>
 <ul>
 <li><code>fetch_count</code> counts only real requests, so we can prove the cache works.</li>
 </ul>
@@ -80,34 +121,82 @@
 <li>Follow the <code>next</code> pointer page by page until it is <code>null</code>, collecting every item into one list.</li>
 <li><code>time.sleep</code> between pages is a crude rate limit: a real pipeline would also read the server’s rate-limit headers and back off when asked.</li>
 </ul>
-<div class="sourceCode" id="cb6" data-include="etl.py" data-snippet="paginate"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb6" data-file="etl/etl.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> time</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> fetch_all(base_url):</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    rows <span class="op">=</span> []</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    page <span class="op">=</span> <span class="dv">1</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">while</span> <span class="va">True</span>:</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>        url <span class="op">=</span> <span class="ss">f"</span><span class="sc">{</span>base_url<span class="sc">}</span><span class="ss">/reports?page=</span><span class="sc">{</span>page<span class="sc">}</span><span class="ss">"</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>        data <span class="op">=</span> fetch(url)</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>        rows.extend(data[<span class="st">"items"</span>])</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> data[<span class="st">"next"</span>] <span class="kw">is</span> <span class="va">None</span>:</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>            <span class="cf">break</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>        page <span class="op">=</span> data[<span class="st">"next"</span>]</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>        time.sleep(<span class="fl">0.05</span>)</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> rows</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>reports <span class="op">=</span> fetch_all(BASE_URL)</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"reports:"</span>, <span class="bu">len</span>(reports))</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"HTTP requests so far:"</span>, fetch_count)</span></code></pre></div>
 <h2 data-number="16.4" id="transform"><span class="header-section-number">16.4</span> Transform</h2>
 <ul>
 <li>Transform picks the fields we want and puts them in a fixed order, so the loader does not depend on the exact shape of the JSON.</li>
 <li>It returns a tuple, which DuckDB can bind directly in an insert.</li>
 </ul>
-<div class="sourceCode" id="cb7" data-include="etl.py" data-snippet="transform"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb7" data-file="etl/etl.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> transform(item):</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> (</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>        item[<span class="st">"id"</span>],</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>        item[<span class="st">"event"</span>],</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>        item[<span class="st">"severity"</span>],</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>        item[<span class="st">"latitude"</span>],</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>        item[<span class="st">"longitude"</span>],</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>        item[<span class="st">"reported"</span>],</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>rows <span class="op">=</span> [transform(r) <span class="cf">for</span> r <span class="kw">in</span> reports]</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(rows[<span class="dv">0</span>])</span></code></pre></div>
 <h2 data-number="16.5" id="load-into-duckdb"><span class="header-section-number">16.5</span> Load into DuckDB</h2>
 <ul>
 <li>An in-memory database is enough for a lesson; swap the connection string for a file path to persist it.</li>
 <li>The schema names each column and its type, which is the contract the rest of the analysis relies on.</li>
 </ul>
-<div class="sourceCode" id="cb8" data-include="etl.py" data-snippet="load"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb8" data-file="etl/etl.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> duckdb</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>con <span class="op">=</span> duckdb.<span class="ex">connect</span>(<span class="st">":memory:"</span>)</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>con.execute(<span class="st">"""</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="st">CREATE TABLE storm_reports (</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="st">    id INTEGER,</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="st">    event VARCHAR,</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="st">    severity INTEGER,</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="st">    latitude DOUBLE,</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="st">    longitude DOUBLE,</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a><span class="st">    reported TIMESTAMP</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a><span class="st">)</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a><span class="st">"""</span>)</span></code></pre></div>
 <ul>
 <li><code>executemany</code> inserts the whole batch in one call, binding each <code>?</code> to a value from a tuple.</li>
 <li>The ISO timestamp string is cast to a real <code>TIMESTAMP</code> by the engine.</li>
 </ul>
-<div class="sourceCode" id="cb9" data-include="etl.py" data-snippet="insert"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb9" data-file="etl/etl.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>con.executemany(<span class="st">"INSERT INTO storm_reports VALUES (?, ?, ?, ?, ?, ?)"</span>, rows)</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(con.execute(<span class="st">"SELECT COUNT(*) FROM storm_reports"</span>).fetchone())</span></code></pre></div>
 <ul>
 <li>Now the data is queryable with ordinary SQL.</li>
 </ul>
-<div class="sourceCode" id="cb10" data-include="etl.py" data-snippet="query"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb10" data-file="etl/etl.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    con.execute(</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>        <span class="st">"""</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="st">        SELECT event, COUNT(*) AS n, AVG(severity) AS avg_severity</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="st">        FROM storm_reports</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="st">        GROUP BY event</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="st">        ORDER BY n DESC</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="st">        """</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>    ).fetchall()</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
 <h2 data-number="16.6" id="re-run-from-the-cache"><span class="header-section-number">16.6</span> Re-run from the cache</h2>
 <ul>
 <li>Fetch everything again: every URL is already cached, so no new HTTP request is made.</li>
 <li>That matters in a real job, where a re-fetch may cost money or hit a rate limit.</li>
 </ul>
-<div class="sourceCode" id="cb11" data-include="etl.py" data-snippet="rerun_from_cache"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb11" data-file="etl/etl.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>reports_again <span class="op">=</span> fetch_all(BASE_URL)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"reports:"</span>, <span class="bu">len</span>(reports_again))</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"HTTP requests so far:"</span>, fetch_count)</span></code></pre></div>
 <ul>
 <li>The ecology twin is the same pipeline with a different payload: fetch paginated species observations from iNaturalist or GBIF, transform each record into <code>species</code>, <code>count</code>, <code>latitude</code>, and <code>longitude</code>, and load into the same kind of table.</li>
 <li>Only the endpoint URL and the field names change; the fetch, paginate, cache, and load steps carry over unchanged.</li>

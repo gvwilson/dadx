@@ -19,8 +19,7 @@ Vega-Altair for charts.
 -   Generate the sample inline so the lesson is self-contained; a real pipeline
     would read this from a file or an API instead.
 
-```{.python include="pipeline.py" snippet="make_sample"}
-```
+{{< inc pipeline/pipeline.py mark=make_sample >}}
 
 -   The coordinate ranges pin the incidents to south-eastern Australia, the same
     region the full generator uses; that is an assumption written down rather
@@ -34,8 +33,7 @@ Vega-Altair for charts.
 -   `head` shows the first rows; the schema it prints is the contract the rest
     of the pipeline relies on.
 
-```{.python include="pipeline.py" snippet="ingest"}
-```
+{{< inc pipeline/pipeline.py mark=ingest >}}
 
 ## Clean
 
@@ -44,22 +42,18 @@ Vega-Altair for charts.
 -   The one real clean-up is parsing `timestamp` from a string into a datetime,
     so ordering and date arithmetic work later.
 
-```{.python include="pipeline.py" snippet="clean_profile"}
-```
+{{< inc pipeline/pipeline.py mark=clean_profile >}}
 
-```{.python include="pipeline.py" snippet="clean_parse"}
-```
+{{< inc pipeline/pipeline.py mark=clean_parse >}}
 
 ## Explore
 
 -   `select` picks columns; `filter` picks rows. Both return a new frame and
     leave the original untouched.
 
-```{.python include="pipeline.py" snippet="explore_select"}
-```
+{{< inc pipeline/pipeline.py mark=explore_select >}}
 
-```{.python include="pipeline.py" snippet="explore_filter"}
-```
+{{< inc pipeline/pipeline.py mark=explore_filter >}}
 
 -   `high.shape` is the number of rows and columns: the filter keeps only the
     most severe incidents.
@@ -69,13 +63,11 @@ Vega-Altair for charts.
 -   `group_by` plus an aggregation collapses many rows into one row per group.
 -   Count per kind is the headline number: which incident type is most common?
 
-```{.python include="pipeline.py" snippet="summarize_kind"}
-```
+{{< inc pipeline/pipeline.py mark=summarize_kind >}}
 
 -   The severity distribution is the same operation on a different column.
 
-```{.python include="pipeline.py" snippet="summarize_severity"}
-```
+{{< inc pipeline/pipeline.py mark=summarize_severity >}}
 
 ## Reshape
 
@@ -83,8 +75,7 @@ Vega-Altair for charts.
     into a wide one. Here the severity counts become a matrix with one row per
     kind.
 
-```{.python include="pipeline.py" snippet="reshape"}
-```
+{{< inc pipeline/pipeline.py mark=reshape >}}
 
 -   A `null` cell means no incident of that kind had that severity; the row and
     column totals are the summaries computed above.
@@ -97,8 +88,7 @@ Vega-Altair for charts.
     quantitative (`Q`) so bar height is a measured value. `sort="-y"` orders the
     bars tallest first.
 
-```{.python include="pipeline.py" snippet="plot"}
-```
+{{< inc pipeline/pipeline.py mark=plot >}}
 
 ## Check the answer
 
@@ -106,8 +96,7 @@ Vega-Altair for charts.
     synthetic data gives us ground truth: the counts must sum to the number of
     rows, and every kind must appear.
 
-```{.python include="pipeline.py" snippet="check"}
-```
+{{< inc pipeline/pipeline.py mark=check >}}
 
 -   The ecology twin runs the same stages with `observations` grouped by
     `species`, so "count per kind" becomes "count per species" and the chart

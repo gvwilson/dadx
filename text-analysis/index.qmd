@@ -20,11 +20,9 @@ distinct kind of analysis: text mining.
 -   Our tokenizer does three things: lowercase, strip punctuation, and split on
     whitespace.
 
-```{.python include="text-analysis.py" snippet="imports"}
-```
+{{< inc text-analysis/text-analysis.py mark=imports >}}
 
-```{.python include="text-analysis.py" snippet="tokenize"}
-```
+{{< inc text-analysis/text-analysis.py mark=tokenize >}}
 
 -   Lowercasing turns "Flood" and "flood" into the same token, which is what we
     want when we count.
@@ -41,8 +39,7 @@ distinct kind of analysis: text mining.
 -   Divide each count by the number of tokens so a longer document does not
     automatically score higher.
 
-```{.python include="text-analysis.py" snippet="term_frequency"}
-```
+{{< inc text-analysis/text-analysis.py mark=term_frequency >}}
 
 -   d2 and d4 have four tokens, so their frequencies are 0.25 instead of a
     third; normalizing by length keeps the comparison fair.
@@ -55,11 +52,9 @@ distinct kind of analysis: text mining.
 -   Inverse document frequency (IDF) is high for rare terms and low for common
     ones: it is the log of total documents over document frequency.
 
-```{.python include="text-analysis.py" snippet="document_frequency"}
-```
+{{< inc text-analysis/text-analysis.py mark=document_frequency >}}
 
-```{.python include="text-analysis.py" snippet="idf_weights"}
-```
+{{< inc text-analysis/text-analysis.py mark=idf_weights >}}
 
 -   A term that appears in every document has document frequency equal to the
     total, so its IDF is log(1), which is zero.
@@ -71,8 +66,7 @@ distinct kind of analysis: text mining.
 -   A term scores high only if it is frequent in this document and rare in the
     others, which is exactly what distinguishes one report from the rest.
 
-```{.python include="text-analysis.py" snippet="tfidf"}
-```
+{{< inc text-analysis/text-analysis.py mark=tfidf >}}
 
 ## Documents as vectors
 
@@ -81,19 +75,16 @@ distinct kind of analysis: text mining.
 -   Gather the weights into a tidy Polars frame, one row per document-term pair,
     then pivot into a document-by-term matrix.
 
-```{.python include="text-analysis.py" snippet="vectors"}
-```
+{{< inc text-analysis/text-analysis.py mark=vectors >}}
 
-```{.python include="text-analysis.py" snippet="matrix"}
-```
+{{< inc text-analysis/text-analysis.py mark=matrix >}}
 
 -   Pivot spreads the `term` column into one column per term, and
     `fill_null(0.0)` records the terms absent from a document as zero.
 -   The top-weighted term in each document is the one that separates it from the
     others.
 
-```{.python include="text-analysis.py" snippet="top_terms"}
-```
+{{< inc text-analysis/text-analysis.py mark=top_terms >}}
 
 -   Each document's top term appears in that document alone, which is why its
     IDF, and therefore its TF-IDF, is high.

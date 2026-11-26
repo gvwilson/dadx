@@ -7,8 +7,7 @@
 -   Both examples share the same shape, so one lesson covers both.
 -   Start by pinning the seed and importing the standard library only.
 
-```{.python include="gen-eventlog.py" snippet="imports"}
-```
+{{< inc gen-eventlog/gen-eventlog.py mark=imports >}}
 
 -   `random.seed` makes pseudo-random numbers reproducible: the "random"
     sequence is really a fixed, deterministic stream.
@@ -22,8 +21,7 @@
     every tool in this book.
 -   A tiny helper turns a list of dictionaries into a CSV file with a header.
 
-```{.python include="gen-eventlog.py" snippet="write_csv"}
-```
+{{< inc gen-eventlog/gen-eventlog.py mark=write_csv >}}
 
 -   The header row records the schema, so the file is self-describing.
 -   `newline=""` stops Windows from inserting stray blank lines.
@@ -34,14 +32,12 @@
 -   `responders` is the parent for the disaster example: people, each with an
     ID, a name, a join date, and a role.
 
-```{.python include="gen-eventlog.py" snippet="make_responders"}
-```
+{{< inc gen-eventlog/gen-eventlog.py mark=make_responders >}}
 
 -   `sites` is the parent for the ecology example: survey locations, each with
     an ID, a position, and a habitat.
 
-```{.python include="gen-eventlog.py" snippet="make_sites"}
-```
+{{< inc gen-eventlog/gen-eventlog.py mark=make_sites >}}
 
 -   Both parents use a plain integer ID as the join key.
 -   The generator documents its assumptions: the coordinate ranges pin both
@@ -54,14 +50,12 @@
 -   `incidents` belongs to the disaster example: each row is one report, tagged
     with the responder who handled it.
 
-```{.python include="gen-eventlog.py" snippet="make_incidents"}
-```
+{{< inc gen-eventlog/gen-eventlog.py mark=make_incidents >}}
 
 -   `observations` is the ecology analogue: each row is one species sighting at
     one site.
 
-```{.python include="gen-eventlog.py" snippet="make_observations"}
-```
+{{< inc gen-eventlog/gen-eventlog.py mark=make_observations >}}
 
 -   `observations.site_id` mirrors `incidents.responder_id`: one foreign key
     column, same role in both examples.
@@ -73,8 +67,7 @@
 -   Generate the parent tables first, then the records that reference them.
 -   Writing the files is just four calls to the helper.
 
-```{.python include="gen-eventlog.py" snippet="write_files"}
-```
+{{< inc gen-eventlog/gen-eventlog.py mark=write_files >}}
 
 -   CSV is portable: these four files can be opened in Polars, DuckDB, a
     spreadsheet, or another language without any special tooling.
@@ -85,8 +78,7 @@
     the foreign keys line up.
 -   Polars makes the two joins one-liners, and shows the shared shape clearly.
 
-```{.python include="gen-eventlog.py" snippet="verify_join"}
-```
+{{< inc gen-eventlog/gen-eventlog.py mark=verify_join >}}
 
 -   A left join keeps every record and attaches the matching parent row.
 -   If any foreign key had no match, the parent columns would be `null`; a

@@ -15,16 +15,14 @@ analysis: nearest-neighbor and similarity search.
 -   Pin the seed first so the pseudo-random stream reproduces exactly.
 -   `random.seed` makes the "random" numbers deterministic: same seed, same rows.
 
-```{.python include="similarity.py" snippet="imports"}
-```
+{{< inc similarity/similarity.py mark=imports >}}
 
 -   Each incident has three numeric features: `severity`, `latitude`, and
     `longitude`.
 -   `severity` runs 1 (minor) to 5 (major); the coordinates sit in
     south-eastern Australia, matching the running example.
 
-```{.python include="similarity.py" snippet="generate"}
-```
+{{< inc similarity/similarity.py mark=generate >}}
 
 -   `id` labels a row; it is not a feature, because a label carries no notion
     of closeness.
@@ -38,8 +36,7 @@ analysis: nearest-neighbor and similarity search.
 -   `math.dist` computes it; the distance is zero only when two rows are
     identical.
 
-```{.python include="similarity.py" snippet="distance"}
-```
+{{< inc similarity/similarity.py mark=distance >}}
 
 ## Scale the features
 
@@ -48,16 +45,14 @@ analysis: nearest-neighbor and similarity search.
     barely moves the answer.
 -   Standardizing gives every feature the same spread, so each counts equally.
 
-```{.python include="similarity.py" snippet="minmax"}
-```
+{{< inc similarity/similarity.py mark=minmax >}}
 
 -   A z-score subtracts the feature's mean and divides by its standard
     deviation.
 -   After scaling, every feature has mean 0 and standard deviation 1.
 -   "One unit apart" now means "one standard deviation apart" in any feature.
 
-```{.python include="similarity.py" snippet="scale"}
-```
+{{< inc similarity/similarity.py mark=scale >}}
 
 ## Find the nearest neighbors
 
@@ -65,8 +60,7 @@ analysis: nearest-neighbor and similarity search.
 -   Compute its distance to every row; the query's distance to itself is zero.
 -   Drop the query row, sort ascending, and keep the `k` closest.
 
-```{.python include="similarity.py" snippet="nearest_neighbors"}
-```
+{{< inc similarity/similarity.py mark=nearest_neighbors >}}
 
 -   Nearest neighbors generalize "equal to" into "near to".
 -   Recommendation ("show me more like this") and record linkage ("is this the
@@ -76,8 +70,7 @@ analysis: nearest-neighbor and similarity search.
 
 -   Compare the same query in raw and scaled space to see the choice matter.
 
-```{.python include="similarity.py" snippet="raw_comparison"}
-```
+{{< inc similarity/similarity.py mark=raw_comparison >}}
 
 -   The two lists differ: raw distance ranks id 8 in the top three, scaled
     distance puts id 7 there instead.

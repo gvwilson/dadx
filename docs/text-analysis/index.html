@@ -48,8 +48,24 @@
 <li>The ecology twin is the same shape: field notes stand in for report descriptions and run through the same code.</li>
 <li>Our tokenizer does three things: lowercase, strip punctuation, and split on whitespace.</li>
 </ul>
-<div class="sourceCode" id="cb1" data-include="text-analysis.py" data-snippet="imports"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
-<div class="sourceCode" id="cb2" data-include="text-analysis.py" data-snippet="tokenize"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb1" data-file="text-analysis/text-analysis.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> math</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> string</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> collections <span class="im">import</span> Counter</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> polars <span class="im">as</span> pl</span></code></pre></div>
+<div class="sourceCode" id="cb2" data-file="text-analysis/text-analysis.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>DESCRIPTIONS <span class="op">=</span> {</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"d1"</span>: <span class="st">"flood water basement"</span>,</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">"d2"</span>: <span class="st">"storm downed power line"</span>,</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">"d3"</span>: <span class="st">"flood road closed"</span>,</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">"d4"</span>: <span class="st">"storm power outage reported"</span>,</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">"d5"</span>: <span class="st">"flood water rising"</span>,</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> tokenize(text):</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    text <span class="op">=</span> text.lower()</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    text <span class="op">=</span> text.translate(<span class="bu">str</span>.maketrans(<span class="st">""</span>, <span class="st">""</span>, string.punctuation))</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> text.split()</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>tokenized <span class="op">=</span> {doc_id: tokenize(text) <span class="cf">for</span> doc_id, text <span class="kw">in</span> DESCRIPTIONS.items()}</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> doc_id, toks <span class="kw">in</span> tokenized.items():</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(doc_id, toks)</span></code></pre></div>
 <ul>
 <li>Lowercasing turns “Flood” and “flood” into the same token, which is what we want when we count.</li>
 <li><code>str.translate</code> with <code>str.maketrans("", "", string.punctuation)</code> removes punctuation in one pass.</li>
@@ -61,7 +77,13 @@
 <li><code>collections.Counter</code> turns a list of tokens into counts in one call.</li>
 <li>Divide each count by the number of tokens so a longer document does not automatically score higher.</li>
 </ul>
-<div class="sourceCode" id="cb3" data-include="text-analysis.py" data-snippet="term_frequency"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb3" data-file="text-analysis/text-analysis.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> term_frequencies(tokens):</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    counts <span class="op">=</span> Counter(tokens)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    total <span class="op">=</span> <span class="bu">len</span>(tokens)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> {term: count <span class="op">/</span> total <span class="cf">for</span> term, count <span class="kw">in</span> counts.items()}</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> doc_id, toks <span class="kw">in</span> tokenized.items():</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    tf <span class="op">=</span> term_frequencies(toks)</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(doc_id, {t: <span class="bu">round</span>(f, <span class="dv">3</span>) <span class="cf">for</span> t, f <span class="kw">in</span> tf.items()})</span></code></pre></div>
 <ul>
 <li>d2 and d4 have four tokens, so their frequencies are 0.25 instead of a third; normalizing by length keeps the comparison fair.</li>
 </ul>
@@ -71,8 +93,19 @@
 <li>Document frequency counts how many documents contain a term.</li>
 <li>Inverse document frequency (IDF) is high for rare terms and low for common ones: it is the log of total documents over document frequency.</li>
 </ul>
-<div class="sourceCode" id="cb4" data-include="text-analysis.py" data-snippet="document_frequency"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
-<div class="sourceCode" id="cb5" data-include="text-analysis.py" data-snippet="idf_weights"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb4" data-file="text-analysis/text-analysis.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> document_frequencies(docs):</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    df <span class="op">=</span> Counter()</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> toks <span class="kw">in</span> docs.values():</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> term <span class="kw">in</span> <span class="bu">set</span>(toks):</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>            df[term] <span class="op">+=</span> <span class="dv">1</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> df</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>doc_freq <span class="op">=</span> document_frequencies(tokenized)</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(doc_freq)</span></code></pre></div>
+<div class="sourceCode" id="cb5" data-file="text-analysis/text-analysis.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>n_docs <span class="op">=</span> <span class="bu">len</span>(DESCRIPTIONS)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> idf_weights(df, n):</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> {term: math.log(n <span class="op">/</span> count) <span class="cf">for</span> term, count <span class="kw">in</span> df.items()}</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>idf <span class="op">=</span> idf_weights(doc_freq, n_docs)</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>({t: <span class="bu">round</span>(w, <span class="dv">3</span>) <span class="cf">for</span> t, w <span class="kw">in</span> idf.items()})</span></code></pre></div>
 <ul>
 <li>A term that appears in every document has document frequency equal to the total, so its IDF is log(1), which is zero.</li>
 <li>Terms unique to one document get the highest IDF, about 1.609 here.</li>
@@ -82,20 +115,38 @@
 <li>TF-IDF multiplies term frequency by inverse document frequency.</li>
 <li>A term scores high only if it is frequent in this document and rare in the others, which is exactly what distinguishes one report from the rest.</li>
 </ul>
-<div class="sourceCode" id="cb6" data-include="text-analysis.py" data-snippet="tfidf"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb6" data-file="text-analysis/text-analysis.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> tfidf(tf, idf):</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> {term: freq <span class="op">*</span> idf[term] <span class="cf">for</span> term, freq <span class="kw">in</span> tf.items()}</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>scores <span class="op">=</span> {</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    doc_id: tfidf(term_frequencies(toks), idf)</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> doc_id, toks <span class="kw">in</span> tokenized.items()</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> doc_id, w <span class="kw">in</span> scores.items():</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(doc_id, {t: <span class="bu">round</span>(x, <span class="dv">3</span>) <span class="cf">for</span> t, x <span class="kw">in</span> w.items()})</span></code></pre></div>
 <h2 data-number="14.5" id="documents-as-vectors"><span class="header-section-number">14.5</span> Documents as vectors</h2>
 <ul>
 <li>A document is now a vector of term weights, one dimension per term.</li>
 <li>Most entries are zero because most terms do not appear in most documents.</li>
 <li>Gather the weights into a tidy Polars frame, one row per document-term pair, then pivot into a document-by-term matrix.</li>
 </ul>
-<div class="sourceCode" id="cb7" data-include="text-analysis.py" data-snippet="vectors"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
-<div class="sourceCode" id="cb8" data-include="text-analysis.py" data-snippet="matrix"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb7" data-file="text-analysis/text-analysis.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>rows <span class="op">=</span> []</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> doc_id, weights <span class="kw">in</span> scores.items():</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> term, weight <span class="kw">in</span> weights.items():</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>        rows.append({<span class="st">"doc"</span>: doc_id, <span class="st">"term"</span>: term, <span class="st">"weight"</span>: <span class="bu">round</span>(weight, <span class="dv">3</span>)})</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>weights_df <span class="op">=</span> pl.DataFrame(rows)</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(weights_df.sort(<span class="st">"weight"</span>, descending<span class="op">=</span><span class="va">True</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb8" data-file="text-analysis/text-analysis.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>matrix <span class="op">=</span> weights_df.pivot(on<span class="op">=</span><span class="st">"term"</span>, index<span class="op">=</span><span class="st">"doc"</span>, values<span class="op">=</span><span class="st">"weight"</span>)</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>matrix <span class="op">=</span> matrix.fill_null(<span class="fl">0.0</span>)</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(matrix)</span></code></pre></div>
 <ul>
 <li>Pivot spreads the <code>term</code> column into one column per term, and <code>fill_null(0.0)</code> records the terms absent from a document as zero.</li>
 <li>The top-weighted term in each document is the one that separates it from the others.</li>
 </ul>
-<div class="sourceCode" id="cb9" data-include="text-analysis.py" data-snippet="top_terms"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb9" data-file="text-analysis/text-analysis.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>top_terms <span class="op">=</span> weights_df.group_by(<span class="st">"doc"</span>).agg(</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    pl.col(<span class="st">"term"</span>).sort_by(<span class="st">"weight"</span>, descending<span class="op">=</span><span class="va">True</span>).first().alias(<span class="st">"top_term"</span>),</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    pl.col(<span class="st">"weight"</span>).sort_by(<span class="st">"weight"</span>, descending<span class="op">=</span><span class="va">True</span>).first().alias(<span class="st">"top_weight"</span>),</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(top_terms.sort(<span class="st">"doc"</span>))</span></code></pre></div>
 <ul>
 <li>Each document’s top term appears in that document alone, which is why its IDF, and therefore its TF-IDF, is high.</li>
 <li>Text needs the same cleaning as numbers: lowercase before comparing, strip punctuation, and decide what to do about typos and near-duplicates.</li>

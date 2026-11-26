@@ -1,12 +1,12 @@
-# start snippet import
+# mccole:import
 import polars as pl
 import altair as alt
 import random
 
 random.seed(12345)
-# end snippet import
+# mccole:/import
 
-# start snippet helpers
+# mccole:helpers
 START_YEAR = 2024
 
 def month_index(ym):
@@ -17,9 +17,9 @@ def month_index(ym):
 def month_label(idx):
     """An integer month number -> '2024-03'."""
     return f"{START_YEAR + idx // 12:04d}-{idx % 12 + 1:02d}"
-# end snippet helpers
+# mccole:/helpers
 
-# start snippet generate
+# mccole:generate
 roles = ["medic", "logistics", "search", "comms"]
 names = ["Aisha", "Ben", "Cara", "Dmitri", "Elena", "Farid",
          "Grace", "Hiro", "Ines", "Jules", "Keiko", "Liam"]
@@ -39,9 +39,9 @@ for cohort in range(6):                     # six first-response months
         for k in range(lifetime):           # months since first response
             for _ in range(random.randint(1, 3)):
                 incidents.append((len(incidents) + 1, month_label(cohort + k), rid))
-# end snippet generate
+# mccole:/generate
 
-# start snippet tables
+# mccole:tables
 responders = pl.DataFrame(
     responders, schema=["id", "name", "joined", "role"], orient="row"
 )
@@ -51,15 +51,15 @@ incidents = pl.DataFrame(
 
 print(responders.head())
 print(incidents.head())
-# end snippet tables
+# mccole:/tables
 
-# start snippet month_index
+# mccole:month_index
 incidents = incidents.with_columns(
     month_idx=pl.col("timestamp").map_elements(month_index, return_dtype=pl.Int64)
 )
-# end snippet month_index
+# mccole:/month_index
 
-# start snippet join
+# mccole:join
 responses = incidents.join(
     responders.select("id", "name", "joined", "role"),
     left_on="responder_id", right_on="id",
@@ -69,16 +69,16 @@ cohorts = (
     responses.group_by("responder_id")
     .agg(pl.col("month_idx").min().alias("cohort_idx"))
 )
-# end snippet join
+# mccole:/join
 
-# start snippet active
+# mccole:active
 active = (
     responses.join(cohorts, on="responder_id")
     .with_columns(period=pl.col("month_idx") - pl.col("cohort_idx"))
 )
-# end snippet active
+# mccole:/active
 
-# start snippet retention
+# mccole:retention
 retention = (
     active.group_by("cohort_idx", "period")
     .agg(pl.col("responder_id").n_unique().alias("active"))
@@ -86,9 +86,9 @@ retention = (
 )
 
 print(retention.head())
-# end snippet retention
+# mccole:/retention
 
-# start snippet check
+# mccole:check
 sizes = cohorts.group_by("cohort_idx").len().sort("cohort_idx")
 first = (
     retention.filter(pl.col("period") == 0)
@@ -96,18 +96,18 @@ first = (
     .sort("cohort_idx")
 )
 assert (sizes["len"] == first["active"]).all()
-# end snippet check
+# mccole:/check
 
-# start snippet rate
+# mccole:rate
 rate = (
     retention.join(sizes.rename({"len": "size"}), on="cohort_idx")
     .with_columns(rate=pl.col("active") / pl.col("size"))
 )
 
 print(rate.head())
-# end snippet rate
+# mccole:/rate
 
-# start snippet plot
+# mccole:plot
 plot = retention.with_columns(
     cohort=pl.col("cohort_idx").map_elements(month_label, return_dtype=pl.String),
     months_since=pl.col("period"),
@@ -122,4 +122,4 @@ chart = (
     ).properties(title="Volunteer retention by cohort")
 )
 chart.save("retention.json")
-# end snippet plot
+# mccole:/plot

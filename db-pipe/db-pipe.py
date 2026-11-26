@@ -1,4 +1,4 @@
-# start snippet setup
+# mccole:setup
 import random
 from datetime import date, datetime, timedelta
 
@@ -7,9 +7,9 @@ import polars as pl
 
 SEED = 20261108
 random.seed(SEED)
-# end snippet setup
+# mccole:/setup
 
-# start snippet responders
+# mccole:responders
 FIRST = ["Ada", "Grace", "Alan", "Edsger", "Barbara", "Donald", "Kathleen", "John"]
 LAST = ["Lovelace", "Hopper", "Turing", "Dijkstra", "Liskov", "Knuth", "Booth", "Backus"]
 ROLES = ["dispatcher", "field-officer", "medic", "coordinator"]
@@ -22,9 +22,9 @@ responders = pl.DataFrame({
     "role": [random.choice(ROLES) for _ in range(8)],
 })
 print(responders)
-# end snippet responders
+# mccole:/responders
 
-# start snippet incidents
+# mccole:incidents
 KINDS = ["storm", "flood", "power-outage", "fire"]
 STATUSES = ["reported", "triaged", "dispatched", "resolved"]
 
@@ -44,9 +44,9 @@ incidents = pl.DataFrame({
     "responder_id": [random.randint(1, 8) for _ in range(n)],
 })
 print(incidents)
-# end snippet incidents
+# mccole:/incidents
 
-# start snippet load
+# mccole:load
 con = duckdb.connect()
 
 con.execute("""
@@ -78,48 +78,48 @@ con.executemany(
     "INSERT INTO incidents VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
     incidents.rows(),
 )
-# end snippet load
+# mccole:/load
 
-# start snippet select_sql
+# mccole:select_sql
 print(con.execute("SELECT id, kind, severity FROM incidents LIMIT 3").fetchall())
-# end snippet select_sql
+# mccole:/select_sql
 
-# start snippet select_polars
+# mccole:select_polars
 print(incidents.select(["id", "kind", "severity"]).head(3))
-# end snippet select_polars
+# mccole:/select_polars
 
-# start snippet where_sql
+# mccole:where_sql
 print(con.execute("""
 SELECT id, kind, severity
 FROM incidents
 WHERE severity >= 4
 ORDER BY severity DESC
 """).fetchall())
-# end snippet where_sql
+# mccole:/where_sql
 
-# start snippet where_polars
+# mccole:where_polars
 print(
     incidents
     .filter(pl.col("severity") >= 4)
     .select(["id", "kind", "severity"])
     .sort("severity", descending=True)
 )
-# end snippet where_polars
+# mccole:/where_polars
 
-# start snippet group_by_sql
+# mccole:group_by_sql
 print(con.execute("""
 SELECT kind, COUNT(*) AS n
 FROM incidents
 GROUP BY kind
 ORDER BY n DESC
 """).fetchall())
-# end snippet group_by_sql
+# mccole:/group_by_sql
 
-# start snippet group_by_polars
+# mccole:group_by_polars
 print(incidents.group_by("kind").agg(pl.len().alias("n")).sort("n", descending=True))
-# end snippet group_by_polars
+# mccole:/group_by_polars
 
-# start snippet join_sql
+# mccole:join_sql
 print(con.execute("""
 SELECT i.id, i.kind, r.name
 FROM incidents AS i
@@ -127,27 +127,27 @@ JOIN responders AS r ON i.responder_id = r.id
 ORDER BY i.id
 LIMIT 5
 """).fetchall())
-# end snippet join_sql
+# mccole:/join_sql
 
-# start snippet join_polars
+# mccole:join_polars
 print(
     incidents
     .join(responders, left_on="responder_id", right_on="id", how="inner")
     .select(["id", "kind", "name"])
     .head(5)
 )
-# end snippet join_polars
+# mccole:/join_polars
 
-# start snippet aggregate_sql
+# mccole:aggregate_sql
 print(con.execute("""
 SELECT status, COUNT(*) AS n, ROUND(AVG(severity), 2) AS avg_severity
 FROM incidents
 GROUP BY status
 ORDER BY n DESC
 """).fetchall())
-# end snippet aggregate_sql
+# mccole:/aggregate_sql
 
-# start snippet aggregate_polars
+# mccole:aggregate_polars
 print(
     incidents
     .group_by("status")
@@ -157,4 +157,4 @@ print(
     )
     .sort("n", descending=True)
 )
-# end snippet aggregate_polars
+# mccole:/aggregate_polars

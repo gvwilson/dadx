@@ -17,30 +17,26 @@ fetches species observations from the same shape of endpoint.
 -   The stdlib `http.server` gives us a handler class and a threaded server.
 -   Running the server in a background thread keeps the notebook responsive.
 
-```{.python include="etl.py" snippet="mock_server_imports"}
-```
+{{< inc etl/etl.py mark=mock_server_imports >}}
 
 -   The payload is six storm reports: one per event, with a severity, a
     position, and the time it was reported.
 -   We will serve them two pages at a time, the way a real API paginates.
 
-```{.python include="etl.py" snippet="mock_data"}
-```
+{{< inc etl/etl.py mark=mock_data >}}
 
 -   The handler answers `GET /reports?page=N` with one page of JSON.
 -   The `next` field is the following page number, or `null` on the last page,
     so a client can follow the chain without knowing the total in advance.
 -   `log_message` is silenced so the request log does not clutter the output.
 
-```{.python include="etl.py" snippet="storm_handler"}
-```
+{{< inc etl/etl.py mark=storm_handler >}}
 
 -   Bind to port 0 to let the operating system pick a free port, then read the
     port back from the socket.
 -   The server runs in a daemon thread, so it stops when the process exits.
 
-```{.python include="etl.py" snippet="start_server"}
-```
+{{< inc etl/etl.py mark=start_server >}}
 
 ## Fetch with a cache
 
@@ -51,8 +47,7 @@ fetches species observations from the same shape of endpoint.
 -   A `dict` keyed by URL is a tiny cache: a re-run returns the stored value
     and never touches the network.
 
-```{.python include="etl.py" snippet="fetch_with_cache"}
-```
+{{< inc etl/etl.py mark=fetch_with_cache >}}
 
 -   `fetch_count` counts only real requests, so we can prove the cache works.
 
@@ -63,8 +58,7 @@ fetches species observations from the same shape of endpoint.
 -   `time.sleep` between pages is a crude rate limit: a real pipeline would
     also read the server's rate-limit headers and back off when asked.
 
-```{.python include="etl.py" snippet="paginate"}
-```
+{{< inc etl/etl.py mark=paginate >}}
 
 ## Transform
 
@@ -72,8 +66,7 @@ fetches species observations from the same shape of endpoint.
     loader does not depend on the exact shape of the JSON.
 -   It returns a tuple, which DuckDB can bind directly in an insert.
 
-```{.python include="etl.py" snippet="transform"}
-```
+{{< inc etl/etl.py mark=transform >}}
 
 ## Load into DuckDB
 
@@ -82,20 +75,17 @@ fetches species observations from the same shape of endpoint.
 -   The schema names each column and its type, which is the contract the rest
     of the analysis relies on.
 
-```{.python include="etl.py" snippet="load"}
-```
+{{< inc etl/etl.py mark=load >}}
 
 -   `executemany` inserts the whole batch in one call, binding each `?` to a
     value from a tuple.
 -   The ISO timestamp string is cast to a real `TIMESTAMP` by the engine.
 
-```{.python include="etl.py" snippet="insert"}
-```
+{{< inc etl/etl.py mark=insert >}}
 
 -   Now the data is queryable with ordinary SQL.
 
-```{.python include="etl.py" snippet="query"}
-```
+{{< inc etl/etl.py mark=query >}}
 
 ## Re-run from the cache
 
@@ -104,8 +94,7 @@ fetches species observations from the same shape of endpoint.
 -   That matters in a real job, where a re-fetch may cost money or hit a rate
     limit.
 
-```{.python include="etl.py" snippet="rerun_from_cache"}
-```
+{{< inc etl/etl.py mark=rerun_from_cache >}}
 
 -   The ecology twin is the same pipeline with a different payload: fetch
     paginated species observations from iNaturalist or GBIF, transform each

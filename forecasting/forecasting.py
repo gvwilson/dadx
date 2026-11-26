@@ -1,4 +1,4 @@
-# start snippet setup
+# mccole:setup
 import math
 import random
 
@@ -7,9 +7,9 @@ import polars as pl
 
 SEED = 20261108
 random.seed(SEED)
-# end snippet setup
+# mccole:/setup
 
-# start snippet generate
+# mccole:generate
 N_YEARS = 6
 PERIOD = 12                 # months per year
 BASE = 3.0                  # metres
@@ -28,26 +28,26 @@ def make_river_levels(n):
 
 df = pl.DataFrame(make_river_levels(N_YEARS * PERIOD))
 print(df.head())
-# end snippet generate
+# mccole:/generate
 
-# start snippet split
+# mccole:split
 HOLDOUT = 12
 
 train = df.slice(0, len(df) - HOLDOUT)
 test = df.slice(len(df) - HOLDOUT, HOLDOUT)
 print(f"train: {len(train)} points, test: {len(test)} points")
-# end snippet split
+# mccole:/split
 
-# start snippet baseline
+# mccole:baseline
 def naive_forecast(train, horizon):
     last_value = train["level"][-1]
     return [last_value] * horizon
 
 naive_pred = naive_forecast(train, HOLDOUT)
 print(naive_pred[:4])
-# end snippet baseline
+# mccole:/baseline
 
-# start snippet trend
+# mccole:trend
 def fit_trend(t, y):
     t_mean = sum(t) / len(t)
     y_mean = sum(y) / len(y)
@@ -56,9 +56,9 @@ def fit_trend(t, y):
     slope = num / den
     intercept = y_mean - slope * t_mean
     return intercept, slope
-# end snippet trend
+# mccole:/trend
 
-# start snippet seasonal
+# mccole:seasonal
 def fit_trend_seasonal(t, y, period):
     intercept, slope = fit_trend(t, y)
     detrended = [yi - (intercept + slope * ti) for ti, yi in zip(t, y)]
@@ -70,9 +70,9 @@ def fit_trend_seasonal(t, y, period):
     residuals = [yi - fi for yi, fi in zip(y, fitted)]
     sigma = (sum(r * r for r in residuals) / len(residuals)) ** 0.5
     return intercept, slope, seasonal, sigma
-# end snippet seasonal
+# mccole:/seasonal
 
-# start snippet forecast
+# mccole:forecast
 def trend_seasonal_forecast(t, y, horizon, period):
     intercept, slope, seasonal, _ = fit_trend_seasonal(t, y, period)
     last_t = t[-1]
@@ -86,9 +86,9 @@ t_train = train["t"].to_list()
 y_train = train["level"].to_list()
 trend_pred = trend_seasonal_forecast(t_train, y_train, HOLDOUT, PERIOD)
 print(trend_pred[:4])
-# end snippet forecast
+# mccole:/forecast
 
-# start snippet evaluate
+# mccole:evaluate
 def mean_absolute_error(y_true, y_pred):
     return sum(abs(a - b) for a, b in zip(y_true, y_pred)) / len(y_true)
 
@@ -97,9 +97,9 @@ naive_mae = mean_absolute_error(y_test, naive_pred)
 trend_mae = mean_absolute_error(y_test, trend_pred)
 print(f"naive MAE:          {naive_mae:.3f} m")
 print(f"trend+seasonal MAE: {trend_mae:.3f} m")
-# end snippet evaluate
+# mccole:/evaluate
 
-# start snippet plot
+# mccole:plot
 plot_df = pl.DataFrame({
     "t": test["t"].to_list() * 3,
     "level": y_test + naive_pred + trend_pred,
@@ -112,10 +112,10 @@ chart = alt.Chart(plot_df).mark_line().encode(
     color=alt.Color("series:N", title=None),
 )
 chart.save("forecast.json")
-# end snippet plot
+# mccole:/plot
 
-# start snippet uncertainty
+# mccole:uncertainty
 intercept, slope, seasonal, sigma = fit_trend_seasonal(t_train, y_train, PERIOD)
 print(f"residual sigma: {sigma:.3f} m")
 print(f"first forecast, +/- 2 sigma: {trend_pred[0]:.3f} m +/- {2 * sigma:.3f} m")
-# end snippet uncertainty
+# mccole:/uncertainty

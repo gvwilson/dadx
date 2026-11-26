@@ -14,46 +14,40 @@ and anomaly detection.
     library; `polars` and `altair` do the heavy lifting. We fix the seed so the
     synthetic series, spike, and flags are identical on every run.
 
-```{.python include="anomaly.py" snippet="import"}
-```
+{{< inc anomaly/anomaly.py mark=import >}}
 
 -   A river gauge is a time series: one number per timestamp. We synthesize a
     week of hourly readings as a flat baseline plus small noise, then inject one
     brief flood spike. Real data would arrive from an ingest step; here we make
     it ourselves so the lesson is self-contained.
 
-```{.python include="anomaly.py" snippet="generate"}
-```
+{{< inc anomaly/anomaly.py mark=generate >}}
 
 -   An anomaly is an observation far from what a model expects. Our first model
     is "the level is usually the mean, give or take the standard deviation". A
     z-score measures distance from that mean in units of standard deviation:
     zero is average, 3 is three standard deviations out.
 
-```{.python include="anomaly.py" snippet="z_scores"}
-```
+{{< inc anomaly/anomaly.py mark=z_scores >}}
 
 -   Flag any point whose z-score is outside three standard deviations. Taking
     the absolute value catches both a spike and a sudden drop, since either is
     unusual.
 
-```{.python include="anomaly.py" snippet="flag"}
-```
+{{< inc anomaly/anomaly.py mark=flag >}}
 
 -   Only the four spike points clear the threshold; the noise is well inside it.
     We flag rather than drop: an anomaly is a signal to inspect, not an error to
     remove.
 
-```{.python include="anomaly.py" snippet="plot"}
-```
+{{< inc anomaly/anomaly.py mark=plot >}}
 
 -   The plot puts a red dot on each flagged reading, exactly on the spike. But
     the global mean and standard deviation are fixed. If the river's usual level
     slowly rises, "expected" has moved and every new reading starts to look
     unusual. That movement is drift, and rolling statistics track it.
 
-```{.python include="anomaly.py" snippet="rolling"}
-```
+{{< inc anomaly/anomaly.py mark=rolling >}}
 
 -   The rolling version flags only the leading edge of the spike. A window that
     contains the spike absorbs it into its own mean and standard deviation, so

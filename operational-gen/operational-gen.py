@@ -1,4 +1,4 @@
-# start snippet imports
+# mccole:imports
 import math
 import random
 from datetime import date, timedelta
@@ -8,9 +8,9 @@ import polars as pl
 
 SEED = 20261108
 random.seed(SEED)
-# end snippet imports
+# mccole:/imports
 
-# start snippet river_constants
+# mccole:river_constants
 N_YEARS = 2
 N_DAYS = N_YEARS * 365    # daily readings over two years
 PERIOD = 365              # days per year: the seasonal cycle
@@ -22,9 +22,9 @@ NOISE = 0.12              # metres: day-to-day jitter
 
 FLOOD_DAY = 500           # the day we inject the flood
 FLOOD_JUMP = 3.0          # metres: the brief excursion
-# end snippet river_constants
+# mccole:/river_constants
 
-# start snippet make_river_levels
+# mccole:make_river_levels
 def make_river_levels(n):
     start = date(2024, 1, 1)
     rows = []
@@ -45,9 +45,9 @@ def make_river_levels(n):
 
 readings = pl.DataFrame(make_river_levels(N_DAYS))
 readings.head()
-# end snippet make_river_levels
+# mccole:/make_river_levels
 
-# start snippet plot_river
+# mccole:plot_river
 base = alt.Chart(readings).encode(x="timestamp:T")
 line = base.mark_line().encode(y="river_level:Q")
 marks = base.mark_point(color="red", size=60).encode(
@@ -55,9 +55,9 @@ marks = base.mark_point(color="red", size=60).encode(
 ).transform_filter("datum.anomaly")
 chart = (line + marks).properties(width=600, height=220)
 chart.save("river-levels.json")
-# end snippet plot_river
+# mccole:/plot_river
 
-# start snippet make_environment
+# mccole:make_environment
 T_BASE = 15.0             # degrees C: mean annual temperature
 T_AMPLITUDE = 10.0        # degrees C: summer peak, winter trough
 T_NOISE = 1.2             # degrees C: day-to-day jitter
@@ -87,9 +87,9 @@ def make_environment(n):
 
 environment = pl.DataFrame(make_environment(N_DAYS))
 environment.head()
-# end snippet make_environment
+# mccole:/make_environment
 
-# start snippet plot_pollution
+# mccole:plot_pollution
 base = alt.Chart(environment).encode(x="date:T")
 line = base.mark_line().encode(y="pollution_ppm:Q")
 marks = base.mark_point(color="red", size=60).encode(
@@ -97,4 +97,4 @@ marks = base.mark_point(color="red", size=60).encode(
 ).transform_filter("datum.anomaly")
 chart = (line + marks).properties(width=600, height=220)
 chart.save("pollution.json")
-# end snippet plot_pollution
+# mccole:/plot_pollution

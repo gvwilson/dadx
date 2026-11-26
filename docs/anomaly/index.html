@@ -33,27 +33,70 @@
 <li><p>Monitoring runs continuously, so it must be cheap and logged.</p></li>
 <li><p>Import the tools this lesson needs. <code>statistics</code> comes from the standard library; <code>polars</code> and <code>altair</code> do the heavy lifting. We fix the seed so the synthetic series, spike, and flags are identical on every run.</p></li>
 </ul>
-<div class="sourceCode" id="cb1" data-include="anomaly.py" data-snippet="import"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb1" data-file="anomaly/anomaly.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> random</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> statistics</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> datetime <span class="im">import</span> datetime, timedelta</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> altair <span class="im">as</span> alt</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> polars <span class="im">as</span> pl</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>random.seed(<span class="dv">7</span>)</span></code></pre></div>
 <ul>
 <li>A river gauge is a time series: one number per timestamp. We synthesize a week of hourly readings as a flat baseline plus small noise, then inject one brief flood spike. Real data would arrive from an ingest step; here we make it ourselves so the lesson is self-contained.</li>
 </ul>
-<div class="sourceCode" id="cb2" data-include="anomaly.py" data-snippet="generate"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb2" data-file="anomaly/anomaly.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> <span class="dv">200</span>                  <span class="co"># hourly readings, a bit over a week</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>BASELINE <span class="op">=</span> <span class="fl">2.0</span>           <span class="co"># meters: the gauge's usual level</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>NOISE <span class="op">=</span> <span class="fl">0.1</span>              <span class="co"># meters: hour-to-hour jitter</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>start <span class="op">=</span> datetime(<span class="dv">2024</span>, <span class="dv">6</span>, <span class="dv">1</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>levels <span class="op">=</span> []</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(N):</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    level <span class="op">=</span> BASELINE <span class="op">+</span> random.gauss(<span class="fl">0.0</span>, NOISE)</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="dv">100</span> <span class="op">&lt;=</span> i <span class="op">&lt;=</span> <span class="dv">103</span>:  <span class="co"># a short flood spike</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>        level <span class="op">+=</span> <span class="fl">4.0</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    levels.append(<span class="bu">round</span>(level, <span class="dv">3</span>))</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> pl.DataFrame({</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    <span class="st">"timestamp"</span>: [start <span class="op">+</span> timedelta(hours<span class="op">=</span>i) <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(N)],</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="st">"level"</span>: levels,</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(df.head())</span></code></pre></div>
 <ul>
 <li>An anomaly is an observation far from what a model expects. Our first model is “the level is usually the mean, give or take the standard deviation”. A z-score measures distance from that mean in units of standard deviation: zero is average, 3 is three standard deviations out.</li>
 </ul>
-<div class="sourceCode" id="cb3" data-include="anomaly.py" data-snippet="z_scores"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb3" data-file="anomaly/anomaly.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>mean <span class="op">=</span> statistics.fmean(df[<span class="st">"level"</span>])</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>sd <span class="op">=</span> statistics.stdev(df[<span class="st">"level"</span>])</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(mean, sd)</span></code></pre></div>
 <ul>
 <li>Flag any point whose z-score is outside three standard deviations. Taking the absolute value catches both a spike and a sudden drop, since either is unusual.</li>
 </ul>
-<div class="sourceCode" id="cb4" data-include="anomaly.py" data-snippet="flag"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb4" data-file="anomaly/anomaly.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>THRESHOLD <span class="op">=</span> <span class="fl">3.0</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> df.with_columns(</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    ((pl.col(<span class="st">"level"</span>) <span class="op">-</span> mean) <span class="op">/</span> sd).alias(<span class="st">"z"</span>),</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> df.with_columns(</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    (pl.col(<span class="st">"z"</span>).<span class="bu">abs</span>() <span class="op">&gt;</span> THRESHOLD).alias(<span class="st">"flag"</span>),</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(df.<span class="bu">filter</span>(pl.col(<span class="st">"flag"</span>)))</span></code></pre></div>
 <ul>
 <li>Only the four spike points clear the threshold; the noise is well inside it. We flag rather than drop: an anomaly is a signal to inspect, not an error to remove.</li>
 </ul>
-<div class="sourceCode" id="cb5" data-include="anomaly.py" data-snippet="plot"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb5" data-file="anomaly/anomaly.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>base <span class="op">=</span> alt.Chart(df).encode(x<span class="op">=</span><span class="st">"timestamp:T"</span>)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>line <span class="op">=</span> base.mark_line().encode(y<span class="op">=</span><span class="st">"level:Q"</span>)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>marks <span class="op">=</span> base.mark_point(color<span class="op">=</span><span class="st">"red"</span>, size<span class="op">=</span><span class="dv">70</span>).encode(y<span class="op">=</span><span class="st">"level:Q"</span>).transform_filter(<span class="st">"datum.flag"</span>)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>chart <span class="op">=</span> (line <span class="op">+</span> marks).properties(width<span class="op">=</span><span class="dv">600</span>, height<span class="op">=</span><span class="dv">200</span>)</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>chart.save(<span class="st">"anomaly.json"</span>)</span></code></pre></div>
 <ul>
 <li>The plot puts a red dot on each flagged reading, exactly on the spike. But the global mean and standard deviation are fixed. If the river’s usual level slowly rises, “expected” has moved and every new reading starts to look unusual. That movement is drift, and rolling statistics track it.</li>
 </ul>
-<div class="sourceCode" id="cb6" data-include="anomaly.py" data-snippet="rolling"><pre class="sourceCode python"><code class="sourceCode python"></code></pre></div>
+<div class="sourceCode" id="cb6" data-file="anomaly/anomaly.py"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>WINDOW <span class="op">=</span> <span class="dv">12</span>  <span class="co"># hours: a moving baseline</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> df.with_columns(</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    pl.col(<span class="st">"level"</span>).rolling_mean(window_size<span class="op">=</span>WINDOW).alias(<span class="st">"roll_mean"</span>),</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    pl.col(<span class="st">"level"</span>).rolling_std(window_size<span class="op">=</span>WINDOW).alias(<span class="st">"roll_std"</span>),</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> df.with_columns(</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    ((pl.col(<span class="st">"level"</span>) <span class="op">-</span> pl.col(<span class="st">"roll_mean"</span>)) <span class="op">/</span> pl.col(<span class="st">"roll_std"</span>)).alias(<span class="st">"roll_z"</span>),</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> df.with_columns(</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>    (pl.col(<span class="st">"roll_z"</span>).<span class="bu">abs</span>() <span class="op">&gt;</span> THRESHOLD).alias(<span class="st">"roll_flag"</span>),</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(df.<span class="bu">filter</span>(pl.col(<span class="st">"roll_flag"</span>)))</span></code></pre></div>
 <ul>
 <li><p>The rolling version flags only the leading edge of the spike. A window that contains the spike absorbs it into its own mean and standard deviation, so the trailing points look ordinary again. Rolling statistics follow a slow baseline well and catch a single sharp jump poorly. In practice you keep both models: a global one for the usual level and a rolling one for drift.</p></li>
 <li><p>Monitoring runs continuously, so each check must be cheap. A rolling mean and standard deviation update in constant time from a couple of running sums, and need only the last few readings, not the whole history. Every alert is logged with its readings, window, and threshold, so it can be traced back and replayed.</p></li>

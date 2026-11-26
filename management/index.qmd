@@ -20,8 +20,7 @@ that records each step's inputs and outputs.
 -   Writing those vocabularies as constants means the dictionary and the
     validation code share one source of truth.
 
-```{.python include="management.py" snippet="imports"}
-```
+{{< inc management/management.py mark=imports >}}
 
 -   Store the dictionary as a list of dicts first; a list is easy to read and
     edit, and every other tool can import it.
@@ -29,8 +28,7 @@ that records each step's inputs and outputs.
     stores a description of its range; `None` means the field is not
     constrained.
 
-```{.python include="management.py" snippet="dictionary"}
-```
+{{< inc management/management.py mark=dictionary >}}
 
 -   Turn the list into a dataframe so the dictionary renders as a table and can
     be queried. This is the point of "metadata is data": the dictionary is just
@@ -38,17 +36,14 @@ that records each step's inputs and outputs.
 -   Lists do not display well in a cell, so join them into a comma-separated
     string for display and keep the original list for validation.
 
-```{.python include="management.py" snippet="describe"}
-```
+{{< inc management/management.py mark=describe >}}
 
 -   Because the dictionary is a table, ordinary dataframe queries answer
     questions about the data without touching the data itself.
 
-```{.python include="management.py" snippet="query_dictionary"}
-```
+{{< inc management/management.py mark=query_dictionary >}}
 
-```{.python include="management.py" snippet="categorical_fields"}
-```
+{{< inc management/management.py mark=categorical_fields >}}
 
 ## The dictionary is a contract
 
@@ -58,18 +53,15 @@ that records each step's inputs and outputs.
 -   Validation turns the contract from a promise into a check: walk the
     categorical fields and flag any value outside the controlled vocabulary.
 
-```{.python include="management.py" snippet="validate"}
-```
+{{< inc management/management.py mark=validate >}}
 
 -   A few hand-written rows stand in for the producer's output. Two values
     break the contract on purpose: `"Flood"` is capitalized and `"critical"`
     is not a severity in the dictionary.
 
-```{.python include="management.py" snippet="incidents"}
-```
+{{< inc management/management.py mark=incidents >}}
 
-```{.python include="management.py" snippet="check_contract"}
-```
+{{< inc management/management.py mark=check_contract >}}
 
 -   The two violations are the contract doing its job: without the dictionary,
     `"Flood"` and `"critical"` would silently become separate categories in
@@ -83,29 +75,24 @@ that records each step's inputs and outputs.
     each naming the step, its inputs, its outputs, and when it ran.
 -   Appending one small dict per step keeps the log simple and machine-readable.
 
-```{.python include="management.py" snippet="provenance_log"}
-```
+{{< inc management/management.py mark=provenance_log >}}
 
 -   Run a small pipeline over the incidents and log each step. The log is the
     audit trail that links the final summary back to the raw rows.
 
-```{.python include="management.py" snippet="run_pipeline"}
-```
+{{< inc management/management.py mark=run_pipeline >}}
 
 -   Write the log as JSON lines: one JSON object per line, easy to append and
     easy to read back with any tool.
 
-```{.python include="management.py" snippet="write_log"}
-```
+{{< inc management/management.py mark=write_log >}}
 
 -   Reading the log back as a dataframe closes the loop: the metadata layer is
     itself queryable data, so you can ask "what were the inputs to the summary?"
 
-```{.python include="management.py" snippet="read_back"}
-```
+{{< inc management/management.py mark=read_back >}}
 
-```{.python include="management.py" snippet="query_log"}
-```
+{{< inc management/management.py mark=query_log >}}
 
 -   Without this log, a summary is a rumor: you cannot say how it was made or
     re-make it.
@@ -118,5 +105,4 @@ that records each step's inputs and outputs.
 -   Units matter more here: `mass_g` is grams, `length_mm` is millimeters, and
     `count` is a number of individuals.
 
-```{.python include="management.py" snippet="ecology_twin"}
-```
+{{< inc management/management.py mark=ecology_twin >}}

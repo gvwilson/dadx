@@ -1,4 +1,4 @@
-# start snippet imports
+# mccole:imports
 import csv
 import random
 from datetime import date, datetime, timedelta
@@ -6,17 +6,17 @@ from pathlib import Path
 
 SEED = 20261108
 random.seed(SEED)
-# end snippet imports
+# mccole:/imports
 
-# start snippet write_csv
+# mccole:write_csv
 def write_csv(path, fieldnames, rows):
     with open(path, "w", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(rows)
-# end snippet write_csv
+# mccole:/write_csv
 
-# start snippet make_responders
+# mccole:make_responders
 FIRST = ["Ada", "Grace", "Alan", "Edsger", "Barbara", "Donald", "Kathleen", "John"]
 LAST = ["Lovelace", "Hopper", "Turing", "Dijkstra", "Liskov", "Knuth", "Booth", "Backus"]
 ROLES = ["dispatcher", "field-officer", "medic", "coordinator"]
@@ -32,9 +32,9 @@ def make_responders(n):
             "role": random.choice(ROLES),
         })
     return rows
-# end snippet make_responders
+# mccole:/make_responders
 
-# start snippet make_sites
+# mccole:make_sites
 HABITATS = ["forest", "wetland", "grassland", "riparian"]
 
 def make_sites(n):
@@ -47,9 +47,9 @@ def make_sites(n):
             "habitat": random.choice(HABITATS),
         })
     return rows
-# end snippet make_sites
+# mccole:/make_sites
 
-# start snippet make_incidents
+# mccole:make_incidents
 KINDS = ["storm", "flood", "power-outage", "fire"]
 STATUSES = ["reported", "triaged", "dispatched", "resolved"]
 
@@ -73,9 +73,9 @@ def make_incidents(n, n_responders):
             "responder_id": random.randint(1, n_responders),
         })
     return rows
-# end snippet make_incidents
+# mccole:/make_incidents
 
-# start snippet make_observations
+# mccole:make_observations
 SPECIES = {
     "forest": ["koala", "lyrebird", "wombat"],
     "wetland": ["frog", "ibis", "platypus"],
@@ -97,9 +97,9 @@ def make_observations(n, sites):
             "date": (date(2024, 3, 1) + timedelta(days=random.randint(0, 90))).isoformat(),
         })
     return rows
-# end snippet make_observations
+# mccole:/make_observations
 
-# start snippet write_files
+# mccole:write_files
 responders = make_responders(20)
 write_csv(Path("responders.csv"), ["id", "name", "joined", "role"], responders)
 
@@ -119,9 +119,9 @@ write_csv(
     ["id", "site_id", "species", "count", "mass_g", "length_mm", "date"],
     observations,
 )
-# end snippet write_files
+# mccole:/write_files
 
-# start snippet verify_join
+# mccole:verify_join
 import polars as pl
 
 responders = pl.read_csv("responders.csv")
@@ -137,4 +137,4 @@ observations = pl.read_csv("observations.csv")
 ecology = observations.join(sites, left_on="site_id", right_on="id", how="left")
 print("ecology rows:", ecology.shape)
 print(ecology.select(["id", "species", "habitat"]).head(3))
-# end snippet verify_join
+# mccole:/verify_join
